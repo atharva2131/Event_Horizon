@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'User_CreateEventScreen.dart';
-import 'user_vendor_bookings_screen.dart';
+import 'package:eventhorizon/widgets/user_bottom_nav_screen.dart';
 
 class EventScreen extends StatelessWidget {
   const EventScreen({super.key});
@@ -104,8 +104,8 @@ class EventScreen extends StatelessWidget {
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) =>
-                                        const VendorBookingsScreen(),
+                                    builder: (context) => const BottomNavScreen(
+                                        initialIndex: 2), // Correct usage
                                   ),
                                 );
                               },

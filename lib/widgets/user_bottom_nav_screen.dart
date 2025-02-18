@@ -6,16 +6,17 @@ import 'package:eventhorizon/screens/user_messages_screen.dart';
 import 'package:eventhorizon/screens/user_profile_screen.dart';
 
 class BottomNavScreen extends StatefulWidget {
-  const BottomNavScreen({super.key});
+  final int initialIndex; // Add this parameter
+
+  const BottomNavScreen({super.key, this.initialIndex = 0}); // Update constructor
 
   @override
   _BottomNavScreenState createState() => _BottomNavScreenState();
 }
 
 class _BottomNavScreenState extends State<BottomNavScreen> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
 
-  // List of screens
   final List<Widget> _screens = [
     const HomeScreen(),
     const EventScreen(),
@@ -25,13 +26,19 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex; // Set initial tab index
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex],  // Show selected screen
+      body: _screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.deepPurple,  // Active icon color
-        unselectedItemColor: Colors.grey,  // Inactive icon color
+        selectedItemColor: Colors.deepPurple,
+        unselectedItemColor: Colors.grey,
         showSelectedLabels: true,
         showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
