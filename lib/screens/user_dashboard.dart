@@ -10,21 +10,24 @@ class UserDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BottomNavScreen();  // Wrap UserDashboard with BottomNavScreen
+    // Start with the default tab (index 0) or pass a specific one.
+    return const BottomNavScreen();
   }
 }
 
 class BottomNavScreen extends StatefulWidget {
-  const BottomNavScreen({super.key});
+  final int initialIndex;
+
+  // Ensure initialIndex has a default value of 0 to prevent errors.
+  const BottomNavScreen({super.key, this.initialIndex = 0});
 
   @override
   _BottomNavScreenState createState() => _BottomNavScreenState();
 }
 
 class _BottomNavScreenState extends State<BottomNavScreen> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
 
-  // List of screens
   final List<Widget> _screens = [
     const HomeScreen(),
     const EventScreen(),
@@ -34,16 +37,22 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex; // Set the selected index from the passed parameter.
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex],  // Show selected screen
+      body: _screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.deepPurple,  // Active icon color
-        unselectedItemColor: Colors.grey,  // Inactive icon color
+        selectedItemColor: Colors.deepPurple,
+        unselectedItemColor: Colors.grey,
         showSelectedLabels: true,
         showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,  
+        type: BottomNavigationBarType.fixed,
         onTap: (index) {
           setState(() {
             _selectedIndex = index;
