@@ -69,8 +69,26 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       );
       return;
     }
-    // Save event logic here
-    print("Event Created: ${_eventNameController.text}");
+
+    // Create a new event object
+    final newEvent = {
+      'name': _eventNameController.text,
+      'type': _selectedEventType!,
+      'date': _dateController.text,
+      'time': _timeController.text,
+      'location': _locationController.text,
+      'description': _descriptionController.text,
+      'budget': _budgetController.text,
+      'coverImage': _coverImage?.path ?? '', // Add cover image path if selected
+    };
+
+    // Pass the created event data back to the HomeScreen
+    Navigator.pop(context, newEvent);
+
+    // Optionally show a confirmation message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Event created successfully!"), backgroundColor: Colors.green),
+    );
   }
 
   @override

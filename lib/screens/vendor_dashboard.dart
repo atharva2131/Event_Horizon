@@ -16,7 +16,7 @@ class _VendorDashboardState extends State<VendorDashboard> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    const VendorHomeScreen(),
+     VendorHomeScreen(),
     const VendorSearchScreen(),
     const VendorBookingsScreen(),
     const VendorMessagesScreen(),

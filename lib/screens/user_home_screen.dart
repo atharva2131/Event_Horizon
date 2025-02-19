@@ -1,7 +1,31 @@
 import 'package:flutter/material.dart';
+import 'User_CreateEventScreen.dart';
+import 'package:eventhorizon/widgets/user_bottom_nav_screen.dart'; // Import the BottomNavScreen (or any other screen)
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  List<Map<String, String>> events = []; // Store events here
+
+  // Function to navigate to CreateEventScreen and receive event data
+  Future<void> _navigateToCreateEventScreen(BuildContext context) async {
+    final newEvent = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const CreateEventScreen()),
+    );
+
+    if (newEvent != null) {
+      setState(() {
+        // Add the new event to the list
+        events.add(newEvent);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,10 +39,11 @@ class HomeScreen extends StatelessWidget {
             children: [
               _buildHeader(),
               const SizedBox(height: 20),
-              _buildCreateEventSection(),
+              _buildCreateEventSection(context), // Pass context to handle navigation
               const SizedBox(height: 20),
               _buildEventsAndBudget(),
               const SizedBox(height: 20),
+              _buildCreatedEvents(), // Display created events
             ],
           ),
         ),
@@ -57,7 +82,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCreateEventSection() {
+  Widget _buildCreateEventSection(BuildContext context) {
     return Stack(
       children: [
         ClipRRect(
@@ -91,15 +116,43 @@ class HomeScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _customButton(
-                      "Create New Event", Colors.purple, Colors.white),
+                      "Create New Event", Colors.purple, Colors.white, context),
                   const SizedBox(width: 10),
-                  _customButton("Browse Vendors", Colors.white, Colors.purple),
+                  _browseVendorsButton(context), // Changed this to the Browse Vendors button
                 ],
               ),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _customButton(String text, Color bgColor, Color textColor, BuildContext context) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+          backgroundColor: bgColor,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10)),
+      onPressed: () => _navigateToCreateEventScreen(context),
+      child: Text(text, style: TextStyle(color: textColor)),
+    );
+  }
+
+  // Updated Browse Vendors button to navigate using pushReplacement
+  Widget _browseVendorsButton(BuildContext context) {
+    return OutlinedButton(
+      onPressed: () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const BottomNavScreen(initialIndex: 2), // Correct usage
+          ),
+        );
+      },
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.purple,
+      ),
+      child: const Text("Browse Vendors"),
     );
   }
 
@@ -112,16 +165,6 @@ class HomeScreen extends StatelessWidget {
         _infoCard(Icons.attach_money, "Budget Overview", "\$5,000 / \$8,000",
             Colors.blue),
       ],
-    );
-  }
-
-  Widget _customButton(String text, Color bgColor, Color textColor) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-          backgroundColor: bgColor,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10)),
-      onPressed: () {},
-      child: Text(text, style: TextStyle(color: textColor)),
     );
   }
 
@@ -147,4 +190,84 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+
+  // Display created events
+  Widget _buildCreatedEvents() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        "Created Events",
+        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+      const SizedBox(height: 10),
+      ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(), // Disable scrolling for this section
+        itemCount: events.length,
+        itemBuilder: (context, index) {
+          final event = events[index];
+          return Card(
+            margin: const EdgeInsets.only(bottom: 10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            elevation: 4, // Adds shadow effect
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Display event image at the top with the loading and error handlers
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(10),
+                    topRight: Radius.circular(10),
+                  ),
+                  child: Image.network(
+                    event['image_url'] ?? "https://via.placeholder.com/150", // Default image if null
+                    width: double.infinity,
+                    height: 150,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) {
+                        return child;
+                      } else {
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    (loadingProgress.expectedTotalBytes ?? 1)
+                                : null,
+                          ),
+                        );
+                      }
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.error, size: 50); // Placeholder if image fails
+                    },
+                  ),
+                ),
+                ListTile(
+                  title: Text(
+                    event['name']!,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    "${event['date']} at ${event['time']} - ${event['location']}",
+                  ),
+                  leading: const Icon(Icons.event, color: Colors.purple),
+                  trailing: const Icon(Icons.arrow_forward, color: Colors.grey),
+                  onTap: () {
+                    // Navigate to event details screen
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    ],
+  );
+}
+
+
 }

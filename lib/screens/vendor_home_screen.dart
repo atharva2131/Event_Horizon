@@ -1,17 +1,107 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
-class VendorHomeScreen extends StatelessWidget {
+class VendorHomeScreen extends StatefulWidget {
   const VendorHomeScreen({super.key});
+
+  @override
+  _VendorHomeScreenState createState() => _VendorHomeScreenState();
+}
+
+class _VendorHomeScreenState extends State<VendorHomeScreen> {
+  List<Map<String, dynamic>> services = [
+    {"title": "Wedding Photography", "price": "\$299/hr", "isActive": true},
+    {"title": "Corporate Events", "price": "\$199/hr", "isActive": true},
+    {"title": "Portrait Sessions", "price": "\$149/hr", "isActive": false},
+  ];
+
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _priceController = TextEditingController();
+
+  List<String> portfolioImages = [];
+
+  final ImagePicker _picker = ImagePicker();
+
+  bool _isEditing = false;
+
+  void _toggleServiceStatus(int index) {
+    setState(() {
+      services[index]["isActive"] = !services[index]["isActive"];
+    });
+  }
+
+  void _addNewService() {
+    if (_titleController.text.isNotEmpty && _priceController.text.isNotEmpty) {
+      setState(() {
+        services.add({
+          "title": _titleController.text,
+          "price": _priceController.text,
+          "isActive": false,
+        });
+      });
+      _titleController.clear();
+      _priceController.clear();
+    }
+    Navigator.pop(context); // Close the modal
+  }
+
+  void _showAddServiceModal() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Add New Service"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  hintText: "Service Title",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _priceController,
+                decoration: const InputDecoration(
+                  hintText: "Service Price",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                _addNewService();
+              },
+              child: const Text("Add Service"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // This function picks an image from the gallery
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        portfolioImages.add(image.path); // Add selected image to portfolio
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text("Dashboard", style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: const [Icon(Icons.more_vert, color: Colors.grey)],
-        backgroundColor: Colors.white,
-        elevation: 1,
+        title: const Text("Vendor Dashboard"),
+        backgroundColor: Colors.blue,
+        actions: const [Icon(Icons.more_vert, color: Colors.white)],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -23,7 +113,7 @@ class VendorHomeScreen extends StatelessWidget {
             const SizedBox(height: 16),
             _buildServicesSection(),
             const SizedBox(height: 16),
-            _buildPortfolioGrid(),
+            _buildPortfolioSection(),
             const SizedBox(height: 16),
             _buildContactInfo(),
           ],
@@ -109,18 +199,33 @@ class VendorHomeScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionHeader("Services", "Edit"),
-          _buildServiceItem("Wedding Photography", "\$299/hr", true),
-          _buildServiceItem("Corporate Events", "\$199/hr", true),
-          _buildServiceItem("Portrait Sessions", "\$149/hr", false),
+          _buildSectionHeader("Services", _isEditing ? "Done" : "Edit"),
+          if (_isEditing)
+            ...List.generate(services.length, (index) {
+              return _buildEditableServiceItem(index);
+            }),
+          if (!_isEditing)
+            ...List.generate(services.length, (index) {
+              return _buildServiceItem(index);
+            }),
           const SizedBox(height: 8),
-          _buildAddServiceButton(),
+          GestureDetector(
+            onTap: _showAddServiceModal,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(8)),
+              child: const Text("+ Add New Service", style: TextStyle(color: Colors.blue)),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildServiceItem(String title, String price, bool isActive) {
+  Widget _buildEditableServiceItem(int index) {
+    final service = services[index];
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -129,54 +234,101 @@ class VendorHomeScreen extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text(price, style: const TextStyle(color: Colors.grey)),
+              Text(service["title"], style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(service["price"], style: const TextStyle(color: Colors.grey)),
             ],
           ),
-          Switch(value: isActive, onChanged: (value) {}),
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.edit, color: Colors.blue),
+                onPressed: () {
+                  setState(() {
+                    _titleController.text = service["title"];
+                    _priceController.text = service["price"];
+                    _isEditing = true;
+                  });
+                  _showAddServiceModal();
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () {
+                  setState(() {
+                    services.removeAt(index);
+                  });
+                },
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildAddServiceButton() {
+  Widget _buildServiceItem(int index) {
+    final service = services[index];
     return Container(
-      padding: const EdgeInsets.all(16),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(8)),
-      child: const Text("+ Add New Service", style: TextStyle(color: Colors.blue)),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(service["title"], style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(service["price"], style: const TextStyle(color: Colors.grey)),
+            ],
+          ),
+          Switch(
+            value: service["isActive"],
+            onChanged: (value) {
+              _toggleServiceStatus(index);
+            },
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildPortfolioGrid() {
-    List<String> images = [
-      "https://storage.googleapis.com/a1aa/image/WNH0kbuxgC1umacs04ib_xDB1OP3UJ0eJnfCUYglbvA.jpg",
-      "https://storage.googleapis.com/a1aa/image/txhIM5NoBKiI7vSRfxYMZYVlk1B2kCAbWkf2v_PbaE4.jpg",
-      "https://storage.googleapis.com/a1aa/image/EiQyZFgOwmTLZzTvgqxTBhQjMMj5FnBcx0OkHKGTyEc.jpg",
-    ];
-
+  Widget _buildPortfolioSection() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: _boxDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionHeader("Portfolio", "12/50 photos"),
+          _buildSectionHeader("Portfolio", ""),
           const SizedBox(height: 8),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 4, mainAxisSpacing: 4),
-            itemCount: images.length,
-            itemBuilder: (context, index) {
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(images[index], fit: BoxFit.cover),
-              );
-            },
+          GestureDetector(
+            onTap: _pickImage,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(8)),
+              child: const Text("Add New Photo", style: TextStyle(color: Colors.blue)),
+            ),
           ),
           const SizedBox(height: 8),
-          _buildAddServiceButton(),
+          portfolioImages.isEmpty
+              ? const Text("No photos added yet.")
+              : GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3, crossAxisSpacing: 4, mainAxisSpacing: 4),
+                  itemCount: portfolioImages.length,
+                  itemBuilder: (context, index) {
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        File(portfolioImages[index]),
+                        fit: BoxFit.cover,
+                      ),
+                    );
+                  },
+                ),
         ],
       ),
     );
@@ -212,7 +364,14 @@ class VendorHomeScreen extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        Text(action, style: const TextStyle(color: Colors.blue)),
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              _isEditing = !_isEditing;
+            });
+          },
+          child: Text(action, style: const TextStyle(color: Colors.blue)),
+        ),
       ],
     );
   }
