@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'User_CreateEventScreen.dart';
-import 'package:eventhorizon/widgets/user_bottom_nav_screen.dart'; // Import the BottomNavScreen (or any other screen)
+import 'package:eventhorizon/widgets/user_bottom_nav_screen.dart'; // Import BottomNavScreen
+import 'dart:io';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -10,7 +13,33 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<Map<String, String>> events = []; // Store events here
+  List<Map<String, String>> events = []; // List to store created events
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEvents(); // Load saved events when the screen initializes
+  }
+
+  // Function to load events from SharedPreferences
+  Future<void> _loadEvents() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? eventsJson = prefs.getString('events');
+    if (eventsJson != null) {
+      setState(() {
+        events = List<Map<String, String>>.from(json
+            .decode(eventsJson)
+            .map((event) => Map<String, String>.from(event)));
+      });
+    }
+  }
+
+  // Function to save events to SharedPreferences
+  Future<void> _saveEvents() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String eventsJson = json.encode(events);
+    prefs.setString('events', eventsJson);
+  }
 
   // Function to navigate to CreateEventScreen and receive event data
   Future<void> _navigateToCreateEventScreen(BuildContext context) async {
@@ -21,9 +50,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (newEvent != null) {
       setState(() {
-        // Add the new event to the list
         events.add(newEvent);
       });
+      _saveEvents(); // Save updated events list
     }
   }
 
@@ -39,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _buildHeader(),
               const SizedBox(height: 20),
-              _buildCreateEventSection(context), // Pass context to handle navigation
+              _buildCreateEventSection(context),
               const SizedBox(height: 20),
               _buildEventsAndBudget(),
               const SizedBox(height: 20),
@@ -58,7 +87,8 @@ class _HomeScreenState extends State<HomeScreen> {
         Row(
           children: [
             const CircleAvatar(
-              backgroundImage: NetworkImage("https://storage.googleapis.com/a1aa/image/v9DaEqSqy7puzZasD8e_nSyNJ8ok4ejZgyDLaXZHhOQ.jpg"),
+              backgroundImage: NetworkImage(
+                  "https://storage.googleapis.com/a1aa/image/v9DaEqSqy7puzZasD8e_nSyNJ8ok4ejZgyDLaXZHhOQ.jpg"),
               radius: 20,
             ),
             const SizedBox(width: 10),
@@ -118,7 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _customButton(
                       "Create New Event", Colors.purple, Colors.white, context),
                   const SizedBox(width: 10),
-                  _browseVendorsButton(context), // Changed this to the Browse Vendors button
+                  _browseVendorsButton(context),
                 ],
               ),
             ],
@@ -128,7 +158,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _customButton(String text, Color bgColor, Color textColor, BuildContext context) {
+  Widget _customButton(
+      String text, Color bgColor, Color textColor, BuildContext context) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
           backgroundColor: bgColor,
@@ -138,14 +169,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Updated Browse Vendors button to navigate using pushReplacement
   Widget _browseVendorsButton(BuildContext context) {
     return OutlinedButton(
       onPressed: () {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => const BottomNavScreen(initialIndex: 2), // Correct usage
+            builder: (context) => const BottomNavScreen(initialIndex: 2),
           ),
         );
       },
@@ -191,7 +221,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Display created events
   Widget _buildCreatedEvents() {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -203,7 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
       const SizedBox(height: 10),
       ListView.builder(
         shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(), // Disable scrolling for this section
+        physics: const NeverScrollableScrollPhysics(),
         itemCount: events.length,
         itemBuilder: (context, index) {
           final event = events[index];
@@ -212,53 +241,38 @@ class _HomeScreenState extends State<HomeScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
-            elevation: 4, // Adds shadow effect
+            elevation: 4,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Display event image at the top with the loading and error handlers
-                ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(10),
-                    topRight: Radius.circular(10),
+                // Display event image at the top
+                if (event['image_url'] != null && event['image_url']!.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(10),
+                      topRight: Radius.circular(10),
+                    ),
+                    child: _displayEventImage(event['image_url']!),
                   ),
-                  child: Image.network(
-                    event['image_url'] ?? "https://via.placeholder.com/150", // Default image if null
-                    width: double.infinity,
-                    height: 150,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) {
-                        return child;
-                      } else {
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                    (loadingProgress.expectedTotalBytes ?? 1)
-                                : null,
-                          ),
-                        );
-                      }
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.error, size: 50); // Placeholder if image fails
-                    },
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        event['name']!,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        "${event['date']} at ${event['time']} - ${event['location']}",
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ],
                   ),
-                ),
-                ListTile(
-                  title: Text(
-                    event['name']!,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    "${event['date']} at ${event['time']} - ${event['location']}",
-                  ),
-                  leading: const Icon(Icons.event, color: Colors.purple),
-                  trailing: const Icon(Icons.arrow_forward, color: Colors.grey),
-                  onTap: () {
-                    // Navigate to event details screen
-                  },
                 ),
               ],
             ),
@@ -269,5 +283,38 @@ class _HomeScreenState extends State<HomeScreen> {
   );
 }
 
-
+// Helper function to display event image properly
+Widget _displayEventImage(String imageUrl) {
+  if (imageUrl.isEmpty) {
+    return Container(
+      height: 150,
+      color: Colors.grey[300],
+      child: const Center(
+        child: Icon(Icons.image_not_supported, size: 50),
+      ),
+    );
+  }
+  if (imageUrl.startsWith('http')) {
+    return Image.network(
+      imageUrl,
+      width: double.infinity,
+      height: 150,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => Container(
+        height: 150,
+        color: Colors.grey[300],
+        child: const Center(
+          child: Icon(Icons.error, size: 50),
+        ),
+      ),
+    );
+  } else {
+    return Image.file(
+      File(imageUrl),
+      width: double.infinity,
+      height: 150,
+      fit: BoxFit.cover,
+    );
+  }
+}
 }
