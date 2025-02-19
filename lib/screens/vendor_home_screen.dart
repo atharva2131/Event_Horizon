@@ -46,44 +46,118 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
     Navigator.pop(context); // Close the modal
   }
 
-  void _showAddServiceModal() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Add New Service"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  hintText: "Service Title",
-                  border: OutlineInputBorder(),
-                ),
+ void _showAddServiceModal() {
+  _titleController.clear(); // Clear previous input
+  _priceController.clear();
+
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text("Add New Service"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(
+                labelText: "Service Title",
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _priceController,
-                decoration: const InputDecoration(
-                  hintText: "Service Price",
-                  border: OutlineInputBorder(),
-                ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _priceController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: "Service Price",
+                border: OutlineInputBorder(),
               ),
-            ],
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                _addNewService();
-              },
-              child: const Text("Add Service"),
             ),
           ],
-        );
-      },
-    );
-  }
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context), // Close modal
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (_titleController.text.isEmpty || _priceController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Please enter both title and price")),
+                );
+                return;
+              }
+
+              setState(() {
+                services.add({
+                  "title": _titleController.text,
+                  "price": _priceController.text,
+                  "isActive": false, // Default to inactive
+                });
+              });
+
+              Navigator.pop(context); // Close modal after adding
+            },
+            child: const Text("Add Service"),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+void _showEditServiceModal(int index) {
+  _titleController.text = services[index]["title"];
+  _priceController.text = services[index]["price"];
+
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text("Edit Service"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(
+                hintText: "Service Title",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _priceController,
+              decoration: const InputDecoration(
+                hintText: "Service Price",
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                services[index]["title"] = _titleController.text;
+                services[index]["price"] = _priceController.text;
+              });
+              Navigator.pop(context); // Close the modal after saving
+            },
+            child: const Text("Save Changes"),
+          ),
+        ],
+      );
+    },
+  );
+}
+
 
   // This function picks an image from the gallery
   Future<void> _pickImage() async {
@@ -240,17 +314,12 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
           ),
           Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.edit, color: Colors.blue),
-                onPressed: () {
-                  setState(() {
-                    _titleController.text = service["title"];
-                    _priceController.text = service["price"];
-                    _isEditing = true;
-                  });
-                  _showAddServiceModal();
-                },
-              ),
+             IconButton(
+  icon: const Icon(Icons.edit, color: Colors.blue),
+  onPressed: () {
+    _showEditServiceModal(index); // ✅ Open the new edit modal
+  },
+),
               IconButton(
                 icon: const Icon(Icons.delete, color: Colors.red),
                 onPressed: () {
