@@ -23,7 +23,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
   // Function to pick an image from the gallery
   Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
         _coverImage = File(pickedFile.path);
@@ -63,13 +64,19 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
   // Function to handle event creation
   void _createEvent() {
-    if (_eventNameController.text.isEmpty || _selectedEventType == null || _dateController.text.isEmpty || _timeController.text.isEmpty) {
+    if (_eventNameController.text.isEmpty ||
+        _selectedEventType == null ||
+        _dateController.text.isEmpty ||
+        _timeController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill all required fields"), backgroundColor: Colors.red),
+        const SnackBar(
+            content: Text("Please fill all required fields"),
+            backgroundColor: Colors.red),
       );
       return;
     }
 
+    // Create a new event object
     // Create a new event object
     final newEvent = {
       'name': _eventNameController.text,
@@ -79,7 +86,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       'location': _locationController.text,
       'description': _descriptionController.text,
       'budget': _budgetController.text,
-      'coverImage': _coverImage?.path ?? '', // Add cover image path if selected
+      'image_url': _coverImage?.path ?? '', // Change this key to 'image_url'
     };
 
     // Pass the created event data back to the HomeScreen
@@ -87,7 +94,9 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
     // Optionally show a confirmation message
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Event created successfully!"), backgroundColor: Colors.green),
+      const SnackBar(
+          content: Text("Event created successfully!"),
+          backgroundColor: Colors.green),
     );
   }
 
@@ -102,12 +111,15 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text("Create Event", style: TextStyle(color: Colors.black)),
+        title:
+            const Text("Create Event", style: TextStyle(color: Colors.black)),
         centerTitle: true,
         actions: [
           TextButton(
             onPressed: _createEvent,
-            child: const Text("Save", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+            child: const Text("Save",
+                style:
+                    TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
           )
         ],
       ),
@@ -125,7 +137,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                   color: Colors.grey[300],
                   borderRadius: BorderRadius.circular(12),
                   image: _coverImage != null
-                      ? DecorationImage(image: FileImage(_coverImage!), fit: BoxFit.cover)
+                      ? DecorationImage(
+                          image: FileImage(_coverImage!), fit: BoxFit.cover)
                       : null,
                 ),
                 child: _coverImage == null
@@ -133,9 +146,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(FontAwesomeIcons.camera, color: Colors.grey, size: 30),
+                            Icon(FontAwesomeIcons.camera,
+                                color: Colors.grey, size: 30),
                             SizedBox(height: 8),
-                            Text("Add Event Cover Photo", style: TextStyle(color: Colors.grey)),
+                            Text("Add Event Cover Photo",
+                                style: TextStyle(color: Colors.grey)),
                           ],
                         ),
                       )
@@ -145,7 +160,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             const SizedBox(height: 16),
 
             // Event Name
-            _buildTextField("Event Name", "e.g., John & Sarah's Wedding", controller: _eventNameController),
+            _buildTextField("Event Name", "e.g., John & Sarah's Wedding",
+                controller: _eventNameController),
 
             // Event Type Dropdown
             _buildDropdown(),
@@ -160,21 +176,30 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             ),
 
             // Location Input
-            _buildTextField("Location", "Search venue or address", controller: _locationController, icon: FontAwesomeIcons.mapMarkerAlt),
+            _buildTextField("Location", "Search venue or address",
+                controller: _locationController,
+                icon: FontAwesomeIcons.mapMarkerAlt),
 
             // Description
-            _buildTextField("Description", "Describe your event...", controller: _descriptionController, maxLines: 4),
+            _buildTextField("Description", "Describe your event...",
+                controller: _descriptionController, maxLines: 4),
 
             // Budget Input
-            _buildTextField("Budget", "\$ 0.00", controller: _budgetController, keyboardType: TextInputType.number, icon: FontAwesomeIcons.dollarSign),
+            _buildTextField("Budget", "\$ 0.00",
+                controller: _budgetController,
+                keyboardType: TextInputType.number,
+                icon: FontAwesomeIcons.dollarSign),
 
             // Create Event Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _createEvent,
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, padding: const EdgeInsets.all(14)),
-                child: const Text("Create Event", style: TextStyle(fontSize: 16, color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    padding: const EdgeInsets.all(14)),
+                child: const Text("Create Event",
+                    style: TextStyle(fontSize: 16, color: Colors.white)),
               ),
             ),
           ],
@@ -184,11 +209,16 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   }
 
   // Text Input Field
-  Widget _buildTextField(String label, String placeholder, {int maxLines = 1, TextInputType? keyboardType, IconData? icon, required TextEditingController controller}) {
+  Widget _buildTextField(String label, String placeholder,
+      {int maxLines = 1,
+      TextInputType? keyboardType,
+      IconData? icon,
+      required TextEditingController controller}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(label,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
         TextField(
           controller: controller,
@@ -197,7 +227,9 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           decoration: InputDecoration(
             hintText: placeholder,
             prefixIcon: icon != null ? Icon(icon, color: Colors.grey) : null,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[300]!)),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey[300]!)),
           ),
         ),
         const SizedBox(height: 16),
@@ -210,14 +242,19 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Event Type", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text("Event Type",
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
         DropdownButtonFormField(
           value: _selectedEventType,
           decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey[300]!)),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey[300]!)),
           ),
-          items: _eventTypes.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
+          items: _eventTypes
+              .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+              .toList(),
           onChanged: (value) {
             setState(() {
               _selectedEventType = value;
@@ -232,14 +269,18 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   Widget _buildDatePicker() {
     return GestureDetector(
       onTap: () => _selectDate(context),
-      child: AbsorbPointer(child: _buildTextField("Date", "Select date", controller: _dateController, icon: FontAwesomeIcons.calendarAlt)),
+      child: AbsorbPointer(
+          child: _buildTextField("Date", "Select date",
+              controller: _dateController, icon: FontAwesomeIcons.calendarAlt)),
     );
   }
 
   Widget _buildTimePicker() {
     return GestureDetector(
       onTap: () => _selectTime(context),
-      child: AbsorbPointer(child: _buildTextField("Time", "Select time", controller: _timeController, icon: FontAwesomeIcons.clock)),
+      child: AbsorbPointer(
+          child: _buildTextField("Time", "Select time",
+              controller: _timeController, icon: FontAwesomeIcons.clock)),
     );
   }
 }
