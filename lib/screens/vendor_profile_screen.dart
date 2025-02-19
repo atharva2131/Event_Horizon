@@ -1,7 +1,30 @@
 import 'package:flutter/material.dart';
+import 'AccountSettingsScreen.dart';
+import 'package:eventhorizon/screens/notifications_screen.dart';
+import 'package:eventhorizon/screens/payment_methods_screen.dart';
+import 'package:eventhorizon/screens/help_support_screen.dart';
+import 'package:eventhorizon/screens/privacy_terms_screen.dart';
 
-class VendorProfileScreen extends StatelessWidget {
+class VendorProfileScreen extends StatefulWidget {
   const VendorProfileScreen({super.key});
+
+  @override
+  _VendorProfileScreenState createState() => _VendorProfileScreenState();
+}
+
+class _VendorProfileScreenState extends State<VendorProfileScreen> {
+  String name = 'Michael Carter';
+  String email = 'michael@example.com';
+  String profilePicture = 'https://via.placeholder.com/150';
+
+  void _updateProfile(
+      String updatedName, String updatedEmail, String updatedPhoto) {
+    setState(() {
+      name = updatedName;
+      email = updatedEmail;
+      profilePicture = updatedPhoto;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,38 +41,47 @@ class VendorProfileScreen extends StatelessWidget {
               Center(
                 child: Column(
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 50,
-                      backgroundImage: NetworkImage('https://via.placeholder.com/150'),
+                      backgroundImage: NetworkImage(profilePicture),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Michael Carter',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    Text(
+                      name,
+                      style: const TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.bold),
                     ),
-                    const Text(
-                      'Professional Decor Vendor',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    Text(
+                      email,
+                      style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
+                    const SizedBox(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: const [
                         Icon(Icons.star, color: Colors.amber),
-                        Text('4.8 (95 reviews)', style: TextStyle(fontSize: 16)),
+                        Text('4.8 (95 reviews)',
+                            style: TextStyle(fontSize: 16)),
                       ],
                     ),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
               const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildStatistic('18', 'Completed Projects'),
-                  _buildStatistic('7', 'Ongoing Orders'),
-                  _buildStatistic('\$35.6k', 'Earnings'),
-                  _buildStatistic('4.8', 'Client Rating'),
-                ],
+
+              // Fix: Wrap statistics row in a SingleChildScrollView for horizontal scrolling
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildStatistic('7', 'Ongoing Orders'),
+                    const SizedBox(width: 20), // Add spacing between items
+                    _buildStatistic('\$35.6k', 'Earnings'),
+                    const SizedBox(width: 20),
+                    _buildStatistic('4.8', 'Client Rating'),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
               const Text(
@@ -57,27 +89,85 @@ class VendorProfileScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
-              Row(
-                children: [
-                  _buildCollaborator('Sophia Lee', 'Florist', 'https://via.placeholder.com/150'),
-                  _buildCollaborator('Daniel Smith', 'Lighting Expert', 'https://via.placeholder.com/150'),
-                  _buildCollaborator('Emily Davis', 'Caterer', 'https://via.placeholder.com/150'),
-                ],
+
+              // Fix: Wrap Row in SingleChildScrollView to avoid overflow
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildCollaborator('Sophia Lee', 'Florist',
+                        'https://via.placeholder.com/150'),
+                    _buildCollaborator('Daniel Smith', 'Lighting Expert',
+                        'https://via.placeholder.com/150'),
+                    _buildCollaborator('Emily Davis', 'Caterer',
+                        'https://via.placeholder.com/150'),
+                  ],
+                ),
               ),
+
               TextButton(
                 onPressed: () {},
                 child: const Text('See All'),
               ),
               const SizedBox(height: 20),
+
               const Text(
                 'Settings & Preferences',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              _buildSettingOption('Account Settings'),
-              _buildSettingOption('Notifications'),
-              _buildSettingOption('Payment Methods'),
-              _buildSettingOption('Help & Support'),
-              _buildSettingOption('Privacy & Terms'),
+
+              _buildSettingOption(
+                'Account Settings',
+                context,
+                () async {
+                  final updatedData = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AccountSettingsScreen(
+                        name: name,
+                        email: email,
+                        profilePicture: profilePicture,
+                      ),
+                    ),
+                  );
+                  if (updatedData != null) {
+                    _updateProfile(updatedData['name'], updatedData['email'],
+                        updatedData['profilePicture']);
+                  }
+                },
+              ),
+              _buildSettingOption(
+                'Notifications',
+                context,
+                () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => NotificationsScreen())),
+              ),
+              _buildSettingOption(
+                'Payment Methods',
+                context,
+                () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => PaymentMethodsScreen())),
+              ),
+              _buildSettingOption(
+                'Help & Support',
+                context,
+                () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => HelpSupportScreen())),
+              ),
+              _buildSettingOption(
+                'Privacy & Terms',
+                context,
+                () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => PrivacyTermsScreen())),
+              ),
             ],
           ),
         ),
@@ -86,17 +176,21 @@ class VendorProfileScreen extends StatelessWidget {
   }
 
   Widget _buildStatistic(String value, String label) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 14, color: Colors.grey),
-        ),
-      ],
+    return Padding(
+      padding:
+          const EdgeInsets.symmetric(horizontal: 8.0), // Prevent tight spacing
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 14, color: Colors.grey),
+          ),
+        ],
+      ),
     );
   }
 
@@ -117,11 +211,12 @@ class VendorProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSettingOption(String title) {
+  Widget _buildSettingOption(
+      String title, BuildContext context, VoidCallback onTap) {
     return ListTile(
       title: Text(title),
       trailing: const Icon(Icons.arrow_forward_ios),
-      onTap: () {},
+      onTap: onTap,
     );
   }
 }
