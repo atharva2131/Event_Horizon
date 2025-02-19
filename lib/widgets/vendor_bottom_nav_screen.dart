@@ -1,3 +1,4 @@
+import 'package:eventhorizon/screens/vendor_profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:eventhorizon/screens/user_home_screen.dart';
 import 'package:eventhorizon/screens/user_events_screen.dart';
@@ -30,7 +31,7 @@ class _VendorBottomNavScreenState extends State<VendorBottomNavScreen> {
     const EventScreen(), // Vendor Search Screen
     const VendorBookingsScreen(), // Vendor Bookings Screen
     const ChatListScreen(), // Vendor Messages Screen
-    const ProfileScreen(), // Vendor Profile Screen
+    const VendorProfileScreen(), // Vendor Profile Screen
   ];
 
   @override

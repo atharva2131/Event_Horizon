@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'AccountSettingsScreen.dart';
-import 'package:eventhorizon/screens/notifications_screen.dart';
-import 'package:eventhorizon/screens/payment_methods_screen.dart';
-import 'package:eventhorizon/screens/help_support_screen.dart';
-import 'package:eventhorizon/screens/privacy_terms_screen.dart';
+import 'Vendor_AccountSettingsScreen.dart';
+import 'package:eventhorizon/screens/Vendor_notifications_screen.dart';
+import 'package:eventhorizon/screens/Vendor_payment_methods_screen.dart';
+import 'package:eventhorizon/screens/Vendor_help_support_screen.dart';
+import 'package:eventhorizon/screens/Vendor_privacy_terms_screen.dart';
 
 class VendorProfileScreen extends StatefulWidget {
   const VendorProfileScreen({super.key});

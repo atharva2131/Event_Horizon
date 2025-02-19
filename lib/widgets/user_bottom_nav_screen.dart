@@ -22,7 +22,7 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
     const EventScreen(),
     const VendorBookingsScreen(),
     const ChatListScreen(),
-    const ProfileScreen(),
+    const UserProfileScreen(),
   ];
 
   @override
