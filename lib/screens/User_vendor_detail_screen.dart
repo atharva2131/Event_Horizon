@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:eventhorizon/screens/user_messages_screen.dart'; // Import the ChatListScreen
 
 class VendorDetailScreen extends StatelessWidget {
   final Map<String, dynamic> vendor;
@@ -25,7 +26,7 @@ class VendorDetailScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildBannerImage(),
-            _buildVendorInfo(context), // ✅ Message button inside Vendor Info
+            _buildVendorInfo(context), 
             _buildDescription(),
             _buildGallery(),
             const SizedBox(height: 20),
@@ -49,14 +50,13 @@ class VendorDetailScreen extends StatelessWidget {
     );
   }
 
-  /// ℹ️ **Vendor Info Section (Now includes Message Button)**
+  /// ℹ️ **Vendor Info Section**
   Widget _buildVendorInfo(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Vendor Details
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -85,29 +85,30 @@ class VendorDetailScreen extends StatelessWidget {
             ),
           ),
 
-          // Smaller Message Button (Aligned Right)
+          // Message Button
           _buildMessageButton(context),
         ],
       ),
     );
   }
 
-  /// ✉️ **Smaller Message Button (Moved to Vendor Info, Right Aligned)**
+  /// ✉️ **Message Button (Navigates to Chat List)**
   Widget _buildMessageButton(BuildContext context) {
     return ElevatedButton(
       key: const Key('messageButton'),
       onPressed: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Opening Chat..."), duration: Duration(seconds: 1)),
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ChatListScreen()),
         );
       },
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.purple,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), // Smaller button
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         elevation: 3,
       ),
-      child: const Icon(FontAwesomeIcons.commentDots, size: 16, color: Colors.white), // Small icon only
+      child: const Icon(FontAwesomeIcons.commentDots, size: 16, color: Colors.white),
     );
   }
 
@@ -118,32 +119,21 @@ class VendorDetailScreen extends StatelessWidget {
       child: Card(
         elevation: 3,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.purple.shade200, Colors.purple.shade100],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                const Text(
-                  "About Vendor",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  " ${vendor["name"]} is a top-rated service provider, known for excellence and professionalism. "
-                  "We offer premium services with outstanding customer satisfaction.",
-                  style: const TextStyle(fontSize: 14, color: Colors.white, height: 1.5),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              const Text(
+                "About Vendor",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                "${vendor["name"]} is a top-rated service provider known for excellence and professionalism.",
+                style: const TextStyle(fontSize: 14, height: 1.5),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
       ),
