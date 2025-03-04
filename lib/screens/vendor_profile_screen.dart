@@ -4,14 +4,16 @@ import 'package:eventhorizon/screens/Vendor_notifications_screen.dart';
 import 'package:eventhorizon/screens/Vendor_payment_methods_screen.dart';
 import 'package:eventhorizon/screens/Vendor_help_support_screen.dart';
 import 'package:eventhorizon/screens/Vendor_privacy_terms_screen.dart';
-
 class VendorProfileScreen extends StatefulWidget {
-  const VendorProfileScreen({super.key});
+  final int vendorIndex;
+  
+
+  const VendorProfileScreen({super.key, required this.vendorIndex});
 
   @override
   _VendorProfileScreenState createState() => _VendorProfileScreenState();
 }
-
+  
 class _VendorProfileScreenState extends State<VendorProfileScreen> {
   String name = 'Michael Carter';
   String email = 'michael@example.com';

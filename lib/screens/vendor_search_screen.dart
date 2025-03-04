@@ -1,7 +1,22 @@
 import 'package:flutter/material.dart';
 
-class VendorSearchScreen extends StatelessWidget {
+class VendorSearchScreen extends StatefulWidget {
   const VendorSearchScreen({super.key});
+
+  @override
+  _VendorSearchScreenState createState() => _VendorSearchScreenState();
+}
+
+class _VendorSearchScreenState extends State<VendorSearchScreen> {
+  String selectedPeriod = "Last 30 Days";
+
+  // Mock Data for Different Time Periods
+  Map<String, Map<String, String>> analyticsData = {
+    "Last 7 Days": {"bookings": "120", "revenue": "\$6.5k", "rating": "4.7", "reviews": "85"},
+    "Last 30 Days": {"bookings": "442", "revenue": "\$26.5k", "rating": "4.8", "reviews": "442"},
+    "Last 3 Months": {"bookings": "1250", "revenue": "\$78k", "rating": "4.9", "reviews": "1230"},
+    "Last Year": {"bookings": "5200", "revenue": "\$320k", "rating": "4.8", "reviews": "5200"},
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -14,23 +29,27 @@ class VendorSearchScreen extends StatelessWidget {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey[200],
-                foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-              child: const Row(
-                children: [
-                  Text("Last 30 Days"),
-                  Icon(Icons.arrow_drop_down),
-                ],
-              ),
+            child: DropdownButton<String>(
+              value: selectedPeriod,
+              onChanged: (String? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    selectedPeriod = newValue;
+                  });
+                }
+              },
+              items: <String>["Last 7 Days", "Last 30 Days", "Last 3 Months", "Last Year"]
+                  .map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+              style: const TextStyle(color: Colors.black, fontSize: 16),
+              dropdownColor: Colors.white,
+              underline: Container(),
             ),
-          )
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -55,6 +74,8 @@ class VendorSearchScreen extends StatelessWidget {
   }
 
   Widget _buildStatCards() {
+    var data = analyticsData[selectedPeriod] ?? analyticsData["Last 30 Days"]!;
+
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -62,10 +83,10 @@ class VendorSearchScreen extends StatelessWidget {
       crossAxisSpacing: 10,
       mainAxisSpacing: 10,
       children: [
-        _buildStatCard(Icons.show_chart, "Bookings", "442", "+12.5%", Colors.blue),
-        _buildStatCard(Icons.attach_money, "Revenue", "\$26.5k", "+8.2%", Colors.green),
-        _buildStatCard(Icons.star, "Rating", "4.8", "+0.3", Colors.yellow),
-        _buildStatCard(Icons.comment, "Reviews", "442", "+22", Colors.purple),
+        _buildStatCard(Icons.show_chart, "Bookings", data["bookings"]!, "+12.5%", Colors.blue),
+        _buildStatCard(Icons.attach_money, "Revenue", data["revenue"]!, "+8.2%", Colors.green),
+        _buildStatCard(Icons.star, "Rating", data["rating"]!, "+0.3", Colors.yellow),
+        _buildStatCard(Icons.comment, "Reviews", data["reviews"]!, "+22", Colors.purple),
       ],
     );
   }
@@ -185,39 +206,8 @@ class VendorSearchScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text("442 reviews", style: TextStyle(color: Colors.grey)),
-            const SizedBox(height: 10),
-            _buildFeedbackBar(1, 8, 0.1),
-            _buildFeedbackBar(2, 12, 0.2),
-            _buildFeedbackBar(3, 45, 0.3),
-            _buildFeedbackBar(4, 132, 0.6),
-            _buildFeedbackBar(5, 245, 0.8),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildFeedbackBar(int rating, int count, double progress) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(rating.toString(), style: const TextStyle(fontSize: 16)),
-              Text(count.toString(), style: const TextStyle(fontSize: 16, color: Colors.grey)),
-            ],
-          ),
-          const SizedBox(height: 4),
-          LinearProgressIndicator(
-            value: progress,
-            backgroundColor: Colors.grey[300],
-            color: Colors.blue,
-            minHeight: 8,
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ],
       ),
     );
   }

@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 
+void main() {
+  runApp(const MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: VendorMessagesScreen(),
+  ));
+}
+
 class VendorMessagesScreen extends StatefulWidget {
   const VendorMessagesScreen({super.key});
 
@@ -12,30 +19,30 @@ class _VendorMessagesScreenState extends State<VendorMessagesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        elevation: 1,
+        elevation: 0,
+        backgroundColor: Colors.deepPurple,
         title: const Text(
-          'Vendor Messages',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w600,
-            color: Colors.deepPurple,
-          ),
+          'Messages',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: Colors.white),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
-            icon: Icon(Icons.search, color: Colors.deepPurple.shade300),
+            icon: const Icon(Icons.search, color: Colors.white),
             onPressed: () {},
           ),
         ],
       ),
       body: Container(
-        color: Colors.grey.shade50,
+        color: Colors.grey.shade100,
         child: ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: 10,
-          separatorBuilder: (context, index) => const SizedBox(height: 12),
+          separatorBuilder: (context, index) => const SizedBox(height: 10),
           itemBuilder: (context, index) => _buildChatItem(context, index),
         ),
       ),
@@ -43,104 +50,78 @@ class _VendorMessagesScreenState extends State<VendorMessagesScreen> {
   }
 
   Widget _buildChatItem(BuildContext context, int index) {
-    return Material(
-      borderRadius: BorderRadius.circular(16),
-      color: Colors.white,
-      elevation: 1,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => VendorChatDetailScreen(chatIndex: index),
-            ),
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Row(
-            children: [
-              Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundImage:
-                        const AssetImage('assets/images/vendor_avatar.png'),
-                    backgroundColor: Colors.deepPurple.shade100,
-                  ),
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => VendorChatDetailScreen(chatIndex: index)),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2))],
+        ),
+        child: Row(
+          children: [
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundImage: const AssetImage('assets/images/vendor_avatar.png'),
+                ),
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
                     ),
-                  )
+                  ),
+                )
+              ],
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Vendor ${index + 1}',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Last message preview...',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                  ),
                 ],
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Vendor ${index + 1}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        Text(
-                          '5:30 PM',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Last message preview...',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              CircleAvatar(
-                radius: 14,
-                backgroundColor: Colors.deepPurple,
-                child: Text(
-                  '3',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+            ),
+            const SizedBox(width: 10),
+            Column(
+              children: [
+                Text('5:30 PM', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                const SizedBox(height: 6),
+                CircleAvatar(
+                  radius: 12,
+                  backgroundColor: Colors.deepPurple,
+                  child: const Text(
+                    '3',
+                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -161,61 +142,31 @@ class _VendorChatDetailScreenState extends State<VendorChatDetailScreen> {
 
   Widget _buildChatMessage(int index) {
     final isMe = index % 2 == 0;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment:
-            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!isMe) const CircleAvatar(radius: 14),
-          if (!isMe) const SizedBox(width: 8),
-          Container(
-            constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.7),
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: BoxDecoration(
-              color: isMe ? Colors.deepPurple.shade50 : Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(isMe ? 20 : 4),
-                topRight: Radius.circular(isMe ? 4 : 20),
-                bottomLeft: const Radius.circular(20),
-                bottomRight: const Radius.circular(20),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+        decoration: BoxDecoration(
+          gradient: isMe
+              ? LinearGradient(colors: [Colors.deepPurple, Colors.purple.shade300])
+              : LinearGradient(colors: [Colors.grey.shade200, Colors.grey.shade300]),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              messages[index],
+              style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 15),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  messages[index],
-                  style: TextStyle(
-                    color: Colors.grey.shade800,
-                    fontSize: 15,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '5:30 PM',
-                  style: TextStyle(
-                    color: Colors.grey.shade500,
-                    fontSize: 10,
-                  ),
-                ),
-              ],
+            const SizedBox(height: 4),
+            Text(
+              '5:30 PM',
+              style: TextStyle(color: isMe ? Colors.white70 : Colors.black54, fontSize: 10),
             ),
-          ),
-          if (isMe) ...[
-            const SizedBox(width: 8),
-            Icon(Icons.done_all, size: 16, color: Colors.grey.shade500),
-          ]
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -224,35 +175,22 @@ class _VendorChatDetailScreenState extends State<VendorChatDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        elevation: 1,
+        elevation: 0,
+        backgroundColor: Colors.deepPurple,
         title: Row(
           children: [
-            const CircleAvatar(
-              radius: 18,
-              backgroundImage: AssetImage('assets/images/vendor_avatar.png'),
-            ),
+            const CircleAvatar(radius: 18, backgroundImage: AssetImage('assets/images/vendor_avatar.png')),
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Vendor ${widget.chatIndex + 1}',
-                  style: const TextStyle(fontSize: 16),
-                ),
-                Text(
-                  'Online',
-                  style: const TextStyle(fontSize: 12, color: Colors.green),
-                ),
+                Text('Vendor ${widget.chatIndex + 1}', style: const TextStyle(fontSize: 16, color: Colors.white)),
+                const Text('Online', style: TextStyle(fontSize: 12, color: Colors.greenAccent)),
               ],
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () {},
-          ),
-        ],
+        actions: [IconButton(icon: const Icon(Icons.more_vert, color: Colors.white), onPressed: () {})],
       ),
       body: Column(
         children: [
@@ -270,16 +208,11 @@ class _VendorChatDetailScreenState extends State<VendorChatDetailScreen> {
 
   Widget _buildMessageInputField() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8, offset: const Offset(0, -2))],
       ),
       child: Row(
         children: [
@@ -290,16 +223,11 @@ class _VendorChatDetailScreenState extends State<VendorChatDetailScreen> {
                 hintText: 'Type a message...',
                 filled: true,
                 fillColor: Colors.grey.shade100,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           IconButton(
             icon: const Icon(Icons.send, color: Colors.deepPurple),
             onPressed: () {

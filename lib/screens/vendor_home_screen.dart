@@ -1,6 +1,11 @@
 import 'dart:io';
+import 'package:eventhorizon/screens/user_vendor_bookings_screen.dart';
+import 'package:eventhorizon/screens/vendor_bookings_screen.dart';
+import 'package:eventhorizon/widgets/vendor_bottom_nav_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:eventhorizon/screens/vendor_bookings_screen.dart' as vendorBookings;
+
 
 class VendorHomeScreen extends StatefulWidget {
   const VendorHomeScreen({super.key});
@@ -42,124 +47,109 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
       });
       _titleController.clear();
       _priceController.clear();
+      Navigator.pop(context); // Close the modal
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter both title and price")),
+      );
     }
-    Navigator.pop(context); // Close the modal
   }
 
- void _showAddServiceModal() {
-  _titleController.clear(); // Clear previous input
-  _priceController.clear();
+  void _showAddServiceModal() {
+    _titleController.clear();
+    _priceController.clear();
 
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: const Text("Add New Service"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: "Service Title",
-                border: OutlineInputBorder(),
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Add New Service"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: "Service Title",
+                  border: OutlineInputBorder(),
+                ),
               ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _priceController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: "Service Price",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _priceController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: "Service Price",
-                border: OutlineInputBorder(),
-              ),
+            ElevatedButton(
+              onPressed: _addNewService,
+              child: const Text("Add Service"),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context), // Close modal
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (_titleController.text.isEmpty || _priceController.text.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Please enter both title and price")),
-                );
-                return;
-              }
+        );
+      },
+    );
+  }
 
-              setState(() {
-                services.add({
-                  "title": _titleController.text,
-                  "price": _priceController.text,
-                  "isActive": false, // Default to inactive
+  void _showEditServiceModal(int index) {
+    _titleController.text = services[index]["title"];
+    _priceController.text = services[index]["price"];
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Edit Service"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  hintText: "Service Title",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _priceController,
+                decoration: const InputDecoration(
+                  hintText: "Service Price",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  services[index]["title"] = _titleController.text;
+                  services[index]["price"] = _priceController.text;
                 });
-              });
-
-              Navigator.pop(context); // Close modal after adding
-            },
-            child: const Text("Add Service"),
-          ),
-        ],
-      );
-    },
-  );
-}
-
-void _showEditServiceModal(int index) {
-  _titleController.text = services[index]["title"];
-  _priceController.text = services[index]["price"];
-
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: const Text("Edit Service"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                hintText: "Service Title",
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _priceController,
-              decoration: const InputDecoration(
-                hintText: "Service Price",
-                border: OutlineInputBorder(),
-              ),
+                Navigator.pop(context);
+              },
+              child: const Text("Save Changes"),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                services[index]["title"] = _titleController.text;
-                services[index]["price"] = _priceController.text;
-              });
-              Navigator.pop(context); // Close the modal after saving
-            },
-            child: const Text("Save Changes"),
-          ),
-        ],
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 
-
-  // This function picks an image from the gallery
   Future<void> _pickImage() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
@@ -183,7 +173,7 @@ void _showEditServiceModal(int index) {
           children: [
             _buildProfileCard(),
             const SizedBox(height: 16),
-            _buildStatsGrid(),
+            _buildStatsGrid(context),
             const SizedBox(height: 16),
             _buildServicesSection(),
             const SizedBox(height: 16),
@@ -197,7 +187,16 @@ void _showEditServiceModal(int index) {
   }
 
   Widget _buildProfileCard() {
-    return Container(
+  return GestureDetector(
+    onTap: () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const VendorBottomNavScreen(initialIndex: 4), // Profile tab in the Bottom Nav
+        ),
+      );
+    },
+    child: Container(
       padding: const EdgeInsets.all(16),
       decoration: _boxDecoration(),
       child: Row(
@@ -234,22 +233,33 @@ void _showEditServiceModal(int index) {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _buildStatsGrid() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _buildStatCard(Icons.calendar_today, "New Bookings", "3"),
-        _buildStatCard(Icons.star, "Pending Reviews", "2"),
-        _buildStatCard(Icons.attach_money, "Total Revenue", "\$2,450"),
-      ],
-    );
-  }
 
-  Widget _buildStatCard(IconData icon, String title, String value) {
-    return Expanded(
+ Widget _buildStatsGrid(BuildContext context) {
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      _buildStatCard(Icons.calendar_today, "New Bookings", "3", onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const vendorBookings.VendorBookingsScreen()),
+        );
+      }),
+      _buildStatCard(Icons.star, "Pending Reviews", "2"),
+      _buildStatCard(Icons.attach_money, "Total Revenue", "\$2,450"),
+    ],
+  );
+}
+
+
+
+ Widget _buildStatCard(IconData icon, String title, String value, {VoidCallback? onTap}) {
+  return Expanded(
+    child: GestureDetector(
+      onTap: onTap, // Handle navigation when tapped
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.all(12),
@@ -263,8 +273,10 @@ void _showEditServiceModal(int index) {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   Widget _buildServicesSection() {
     return Container(
@@ -314,12 +326,12 @@ void _showEditServiceModal(int index) {
           ),
           Row(
             children: [
-             IconButton(
-  icon: const Icon(Icons.edit, color: Colors.blue),
-  onPressed: () {
-    _showEditServiceModal(index); // ✅ Open the new edit modal
-  },
-),
+              IconButton(
+                icon: const Icon(Icons.edit, color: Colors.blue),
+                onPressed: () {
+                  _showEditServiceModal(index);
+                },
+              ),
               IconButton(
                 icon: const Icon(Icons.delete, color: Colors.red),
                 onPressed: () {
@@ -413,39 +425,47 @@ void _showEditServiceModal(int index) {
           _buildSectionHeader("Contact Information", ""),
           _buildContactItem(Icons.email, "contact@studiocreative.com"),
           _buildContactItem(Icons.phone, "+1 (555) 123-4567"),
-          _buildContactItem(Icons.location_on, "123 Creative St, Art City"),
-          _buildContactItem(Icons.public, "www.studiocreative.com"),
+          _buildContactItem(Icons.location_on, "123 Studio Lane, City, Country"),
         ],
       ),
     );
   }
 
-  Widget _buildContactItem(IconData icon, String info) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.grey),
-      title: Text(info, style: const TextStyle(color: Colors.grey)),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+  Widget _buildContactItem(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.blue),
+        const SizedBox(width: 8),
+        Text(text),
+      ],
     );
   }
 
-  Widget _buildSectionHeader(String title, String action) {
+  Widget _buildSectionHeader(String title, String actionText) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        GestureDetector(
-          onTap: () {
-            setState(() {
-              _isEditing = !_isEditing;
-            });
-          },
-          child: Text(action, style: const TextStyle(color: Colors.blue)),
-        ),
+        if (actionText.isNotEmpty)
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _isEditing = !_isEditing;
+              });
+            },
+            child: Text(actionText),
+          ),
       ],
     );
   }
 
   BoxDecoration _boxDecoration() {
-    return BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.grey.shade300, blurRadius: 5)]);
+    return BoxDecoration(
+      borderRadius: BorderRadius.circular(8),
+      color: Colors.white,
+      boxShadow: [
+        BoxShadow(color: Colors.black.withOpacity(0.1), spreadRadius: 2, blurRadius: 5),
+      ],
+    );
   }
 }
