@@ -4,6 +4,18 @@ import 'package:eventhorizon/screens/user_home_screen.dart';
 import 'package:eventhorizon/screens/user_events_screen.dart';
 import 'package:eventhorizon/screens/user_vendor_bookings_screen.dart';
 import 'package:eventhorizon/screens/user_messages_screen.dart';
+<<<<<<< HEAD
+=======
+
+class VendorDashboard extends StatelessWidget {
+  const VendorDashboard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const VendorBottomNavScreen();  // Wrap VendorDashboard with VendorBottomNavScreen
+  }
+}
+>>>>>>> 7322382a034eda045a5d2b8eb1dc920318736118
 
 class VendorBottomNavScreen extends StatefulWidget {
   final int initialIndex;
