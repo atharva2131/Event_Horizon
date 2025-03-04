@@ -9,14 +9,14 @@ class BookingRequestsPage extends StatefulWidget {
   final String imageUrl;
 
   const BookingRequestsPage({
-    Key? key,
+    super.key,
     required this.name,
     required this.service,
     required this.schedule,
     required this.location,
     required this.price,
     required this.imageUrl,
-  }) : super(key: key);
+  });
 
   @override
   _BookingRequestsPageState createState() => _BookingRequestsPageState();

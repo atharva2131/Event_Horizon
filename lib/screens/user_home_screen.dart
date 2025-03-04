@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+<<<<<<< HEAD
+=======
+import 'User_CreateEventScreen.dart';
+import 'package:eventhorizon/widgets/user_bottom_nav_screen.dart';
+import 'package:eventhorizon/screens/budget_tracker_screen.dart'; 
+import 'package:eventhorizon/screens/event_timeline_screen.dart';
+>>>>>>> 7322382a034eda045a5d2b8eb1dc920318736118
 import 'dart:io';
 import 'User_CreateEventScreen.dart';
 import 'package:eventhorizon/widgets/user_bottom_nav_screen.dart';
@@ -66,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 20),
               _buildCreateEventSection(),
               const SizedBox(height: 20),
-              _buildEventsAndBudget(),
+              _buildEventsAndBudget(context),
               const SizedBox(height: 20),
               _buildCreatedEvents(),
             ],
@@ -180,17 +187,44 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildEventsAndBudget() {
-    return Row(
-      children: [
-        _infoCard(Icons.calendar_today, "My Events", "2 upcoming events",
-            Colors.purple),
-        const SizedBox(width: 10),
-        _infoCard(Icons.attach_money, "Budget Overview", "\$5,000 / \$8,000",
-            Colors.blue),
-      ],
-    );
-  }
+ Widget _buildEventsAndBudget(BuildContext context) {
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween, // Ensures proper spacing
+    children: [
+      Expanded(
+        child: _infoCard(Icons.calendar_today, "My Events", "2 upcoming events", Colors.purple),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: GestureDetector(
+          onTap: () {
+            // Navigate to BudgetTrackerScreen
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => BudgetTrackerScreen()),
+            );
+          },
+          child: _infoCard(Icons.attach_money, "Budget Overview", "\$5,000 / \$8,000", Colors.blue),
+        ),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: GestureDetector(
+          onTap: () {
+            // Navigate to EventTimelineScreen
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const EventTimelineScreen()),
+            );
+          },
+          child: _infoCard(Icons.timeline, "Event Timeline", "View event schedule", Colors.green),
+        ),
+      ),
+    ],
+  );
+}
+
+
 
   Widget _infoCard(
       IconData icon, String title, String subtitle, Color iconColor) {
@@ -230,6 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
           itemCount: events.length,
           itemBuilder: (context, index) {
             final event = events[index];
+<<<<<<< HEAD
 
             return GestureDetector(
               onTap: () {
@@ -283,4 +318,90 @@ class _HomeScreenState extends State<HomeScreen> {
           width: double.infinity, height: 150, fit: BoxFit.cover);
     }
   }
+=======
+            return Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Display event image at the top
+                  if (event['image_url'] != null &&
+                      event['image_url']!.isNotEmpty)
+                    ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(10),
+                        topRight: Radius.circular(10),
+                      ),
+                      child: _displayEventImage(event['image_url']!),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          event['name']!,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          "${event['date']} at ${event['time']} - ${event['location']}",
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+// Helper function to display event image properly
+  Widget _displayEventImage(String imageUrl) {
+    if (imageUrl.isEmpty) {
+      return Container(
+        height: 150,
+        color: Colors.grey[300],
+        child: const Center(
+          child: Icon(Icons.image_not_supported, size: 50),
+        ),
+      );
+    }
+    if (imageUrl.startsWith('http')) {
+      return Image.network(
+        imageUrl,
+        width: double.infinity,
+        height: 150,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          height: 150,
+          color: Colors.grey[300],
+          child: const Center(
+            child: Icon(Icons.error, size: 50),
+          ),
+        ),
+      );
+    } else {
+      return Image.file(
+        File(imageUrl),
+        width: double.infinity,
+        height: 150,
+        fit: BoxFit.cover,
+      );
+    }
+  }
+
+  
+>>>>>>> 7322382a034eda045a5d2b8eb1dc920318736118
 }

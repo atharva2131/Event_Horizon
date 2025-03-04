@@ -4,7 +4,6 @@ import 'package:eventhorizon/screens/user_home_screen.dart';
 import 'package:eventhorizon/screens/user_events_screen.dart';
 import 'package:eventhorizon/screens/user_vendor_bookings_screen.dart';
 import 'package:eventhorizon/screens/user_messages_screen.dart';
-import 'package:eventhorizon/screens/user_profile_screen.dart';
 
 class VendorDashboard extends StatelessWidget {
   const VendorDashboard({super.key});
