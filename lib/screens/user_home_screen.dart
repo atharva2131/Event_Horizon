@@ -1,13 +1,8 @@
+import 'package:eventhorizon/screens/budget_tracker_screen.dart';
+import 'package:eventhorizon/screens/event_timeline_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-<<<<<<< HEAD
-=======
-import 'User_CreateEventScreen.dart';
-import 'package:eventhorizon/widgets/user_bottom_nav_screen.dart';
-import 'package:eventhorizon/screens/budget_tracker_screen.dart'; 
-import 'package:eventhorizon/screens/event_timeline_screen.dart';
->>>>>>> 7322382a034eda045a5d2b8eb1dc920318736118
 import 'dart:io';
 import 'User_CreateEventScreen.dart';
 import 'package:eventhorizon/widgets/user_bottom_nav_screen.dart';
@@ -264,7 +259,6 @@ class _HomeScreenState extends State<HomeScreen> {
           itemCount: events.length,
           itemBuilder: (context, index) {
             final event = events[index];
-<<<<<<< HEAD
 
             return GestureDetector(
               onTap: () {
@@ -318,90 +312,4 @@ class _HomeScreenState extends State<HomeScreen> {
           width: double.infinity, height: 150, fit: BoxFit.cover);
     }
   }
-=======
-            return Card(
-              margin: const EdgeInsets.only(bottom: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              elevation: 4,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Display event image at the top
-                  if (event['image_url'] != null &&
-                      event['image_url']!.isNotEmpty)
-                    ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(10),
-                        topRight: Radius.circular(10),
-                      ),
-                      child: _displayEventImage(event['image_url']!),
-                    ),
-                  Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          event['name']!,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          "${event['date']} at ${event['time']} - ${event['location']}",
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-// Helper function to display event image properly
-  Widget _displayEventImage(String imageUrl) {
-    if (imageUrl.isEmpty) {
-      return Container(
-        height: 150,
-        color: Colors.grey[300],
-        child: const Center(
-          child: Icon(Icons.image_not_supported, size: 50),
-        ),
-      );
-    }
-    if (imageUrl.startsWith('http')) {
-      return Image.network(
-        imageUrl,
-        width: double.infinity,
-        height: 150,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => Container(
-          height: 150,
-          color: Colors.grey[300],
-          child: const Center(
-            child: Icon(Icons.error, size: 50),
-          ),
-        ),
-      );
-    } else {
-      return Image.file(
-        File(imageUrl),
-        width: double.infinity,
-        height: 150,
-        fit: BoxFit.cover,
-      );
-    }
-  }
-
-  
->>>>>>> 7322382a034eda045a5d2b8eb1dc920318736118
 }
