@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+<<<<<<< HEAD
+=======
 import 'User_CreateEventScreen.dart';
 import 'package:eventhorizon/widgets/user_bottom_nav_screen.dart';
 import 'package:eventhorizon/screens/budget_tracker_screen.dart'; 
 import 'package:eventhorizon/screens/event_timeline_screen.dart';
+>>>>>>> 7322382a034eda045a5d2b8eb1dc920318736118
 import 'dart:io';
+import 'User_CreateEventScreen.dart';
+import 'package:eventhorizon/widgets/user_bottom_nav_screen.dart';
+import 'EventDetailScreen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,35 +21,30 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<Map<String, String>> events = []; // List to store created events
+  List<Map<String, dynamic>> events = [];
 
   @override
   void initState() {
     super.initState();
-    _loadEvents(); // Load saved events when the screen initializes
+    _loadEvents();
   }
 
-  // Function to load events from SharedPreferences
   Future<void> _loadEvents() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? eventsJson = prefs.getString('events');
     if (eventsJson != null) {
       setState(() {
-        events = List<Map<String, String>>.from(json
-            .decode(eventsJson)
-            .map((event) => Map<String, String>.from(event)));
+        events = List<Map<String, dynamic>>.from(json.decode(eventsJson));
       });
     }
   }
 
-  // Function to save events to SharedPreferences
   Future<void> _saveEvents() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String eventsJson = json.encode(events);
     prefs.setString('events', eventsJson);
   }
 
-  // Function to navigate to CreateEventScreen and receive event data
   Future<void> _navigateToCreateEventScreen(BuildContext context) async {
     final newEvent = await Navigator.push(
       context,
@@ -54,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         events.add(newEvent);
       });
-      _saveEvents(); // Save updated events list
+      _saveEvents();
     }
   }
 
@@ -70,11 +71,11 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _buildHeader(),
               const SizedBox(height: 20),
-              _buildCreateEventSection(context),
+              _buildCreateEventSection(),
               const SizedBox(height: 20),
               _buildEventsAndBudget(context),
               const SizedBox(height: 20),
-              _buildCreatedEvents(), // Display created events
+              _buildCreatedEvents(),
             ],
           ),
         ),
@@ -114,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCreateEventSection(BuildContext context) {
+  Widget _buildCreateEventSection() {
     return Stack(
       children: [
         ClipRRect(
@@ -147,10 +148,9 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _customButton(
-                      "Create New Event", Colors.purple, Colors.white, context),
+                  _customButton("Create New Event", Colors.purple, Colors.white),
                   const SizedBox(width: 10),
-                  _browseVendorsButton(context),
+                  _browseVendorsButton(),
                 ],
               ),
             ],
@@ -160,8 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _customButton(
-      String text, Color bgColor, Color textColor, BuildContext context) {
+  Widget _customButton(String text, Color bgColor, Color textColor) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
           backgroundColor: bgColor,
@@ -171,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _browseVendorsButton(BuildContext context) {
+  Widget _browseVendorsButton() {
     return OutlinedButton(
       onPressed: () {
         Navigator.pushReplacement(
@@ -265,6 +264,61 @@ class _HomeScreenState extends State<HomeScreen> {
           itemCount: events.length,
           itemBuilder: (context, index) {
             final event = events[index];
+<<<<<<< HEAD
+
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        EventDetailScreen(event: Map<String, String>.from(event)),
+                  ),
+                );
+              },
+              child: Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 4,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _displayEventImage(event['image_url']),
+                    Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Text(
+                        event['name'] ?? "Unnamed Event",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _displayEventImage(String? imageUrl) {
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return Image.asset("assets/default_event.jpg",
+          width: double.infinity, height: 150, fit: BoxFit.cover);
+    } else if (imageUrl.startsWith("http")) {
+      return Image.network(imageUrl,
+          width: double.infinity, height: 150, fit: BoxFit.cover);
+    } else {
+      return Image.file(File(imageUrl),
+          width: double.infinity, height: 150, fit: BoxFit.cover);
+    }
+  }
+=======
             return Card(
               margin: const EdgeInsets.only(bottom: 10),
               shape: RoundedRectangleBorder(
@@ -349,4 +403,5 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   
+>>>>>>> 7322382a034eda045a5d2b8eb1dc920318736118
 }
