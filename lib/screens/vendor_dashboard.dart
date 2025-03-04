@@ -20,7 +20,7 @@ class _VendorDashboardState extends State<VendorDashboard> {
     const VendorSearchScreen(),
     const VendorBookingsScreen(),
     const VendorMessagesScreen(),
-    const VendorProfileScreen(),
+      const VendorProfileScreen(vendorIndex: 0),
   ];
 
   @override
