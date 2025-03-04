@@ -4,18 +4,15 @@ import 'package:eventhorizon/screens/user_home_screen.dart';
 import 'package:eventhorizon/screens/user_events_screen.dart';
 import 'package:eventhorizon/screens/user_vendor_bookings_screen.dart';
 import 'package:eventhorizon/screens/user_messages_screen.dart';
-<<<<<<< HEAD
-=======
 
 class VendorDashboard extends StatelessWidget {
   const VendorDashboard({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const VendorBottomNavScreen();  // Wrap VendorDashboard with VendorBottomNavScreen
+    return const VendorBottomNavScreen(); // Wrap VendorDashboard with VendorBottomNavScreen
   }
 }
->>>>>>> 7322382a034eda045a5d2b8eb1dc920318736118
 
 class VendorBottomNavScreen extends StatefulWidget {
   final int initialIndex;
@@ -36,7 +33,7 @@ class _VendorBottomNavScreenState extends State<VendorBottomNavScreen> {
   }
 
   final List<Widget> _screens = [
-    const HomeScreen(),  // Vendor Home Screen
+    const HomeScreen(), // Vendor Home Screen
     const EventScreen(), // Vendor Event Search Screen
     const VendorBookingsScreen(), // Vendor Bookings Screen
     const ChatListScreen(), // Vendor Messages Screen
@@ -55,12 +52,12 @@ class _VendorBottomNavScreenState extends State<VendorBottomNavScreen> {
       body: _screens[_selectedIndex], // Show the selected screen
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.deepPurple,  // Active icon color
-        unselectedItemColor: Colors.grey,  // Inactive icon color
+        selectedItemColor: Colors.deepPurple, // Active icon color
+        unselectedItemColor: Colors.grey, // Inactive icon color
         showSelectedLabels: true,
         showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
-        onTap: _onItemTapped,  // Handle the tap on bottom nav items
+        onTap: _onItemTapped, // Handle the tap on bottom nav items
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: "Search"),
