@@ -141,35 +141,35 @@ class EventScreen extends StatelessWidget {
 
               // Popular Categories
 
-              // Top Vendors
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text("Top Vendors",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  Text("View All", style: TextStyle(color: Colors.purple)),
-                ],
-              ),
-              const SizedBox(height: 10),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _vendorCard(
-                        "Elegant Events",
-                        "Wedding Planner",
-                        "https://storage.googleapis.com/a1aa/image/N7V4-lXohbfhXolcc2uiPbQ2XxnR7Tz2AhVZA7kx94w.jpg",
-                        4.8),
-                    _vendorCard(
-                        "Gourmet Delight",
-                        "Catering",
-                        "https://storage.googleapis.com/a1aa/image/ykuOARcvs-OPOWx4eLBtkhwxgDZvFO76e_u29TB8cNc.jpg",
-                        4.9),
+                // Top Vendors
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: const [
+                    Text("Top Vendors",
+                        style:
+                            TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text("View All", style: TextStyle(color: Colors.purple)),
                   ],
                 ),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 10),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _vendorCard(
+                          "Elegant Events",
+                          "Wedding Planner",
+                          "https://storage.googleapis.com/a1aa/image/N7V4-lXohbfhXolcc2uiPbQ2XxnR7Tz2AhVZA7kx94w.jpg",
+                          4.8),
+                      _vendorCard(
+                          "Gourmet Delight",
+                          "Catering",
+                          "https://storage.googleapis.com/a1aa/image/ykuOARcvs-OPOWx4eLBtkhwxgDZvFO76e_u29TB8cNc.jpg",
+                          4.9),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
 
               // Event Timeline
               const Text("Event Timeline",
