@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:flutter_countdown_timer/flutter_countdown_timer.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 
 class EventDetailScreen extends StatefulWidget {

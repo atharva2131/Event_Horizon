@@ -1,16 +1,18 @@
-import 'package:eventhorizon/screens/vendor_profile_screen.dart';
+import 'package:eventhorizon/screens/vendor_search_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:eventhorizon/screens/user_home_screen.dart';
-import 'package:eventhorizon/screens/user_events_screen.dart';
-import 'package:eventhorizon/screens/user_vendor_bookings_screen.dart';
-import 'package:eventhorizon/screens/user_messages_screen.dart';
+import 'package:eventhorizon/screens/vendor_home_screen.dart';
+import 'package:eventhorizon/screens/vendor_bookings_screen.dart';
+import 'package:eventhorizon/screens/vendor_messages_screen.dart';
+import 'package:eventhorizon/screens/vendor_profile_screen.dart';
 
 class VendorDashboard extends StatelessWidget {
-  const VendorDashboard({super.key});
+  final int initialIndex;
+
+  const VendorDashboard({super.key, this.initialIndex = 0});
 
   @override
   Widget build(BuildContext context) {
-    return const VendorBottomNavScreen(); // Wrap VendorDashboard with VendorBottomNavScreen
+    return VendorBottomNavScreen(initialIndex: initialIndex);
   }
 }
 
@@ -24,40 +26,40 @@ class VendorBottomNavScreen extends StatefulWidget {
 }
 
 class _VendorBottomNavScreenState extends State<VendorBottomNavScreen> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
 
   @override
   void initState() {
     super.initState();
-    _selectedIndex = widget.initialIndex; // Set the initial index based on the passed parameter
+    _selectedIndex = widget.initialIndex;
   }
 
-  final List<Widget> _screens = [
-    const HomeScreen(), // Vendor Home Screen
-    const EventScreen(), // Vendor Event Search Screen
-    const VendorBookingsScreen(), // Vendor Bookings Screen
-    const ChatListScreen(), // Vendor Messages Screen
-    const VendorProfileScreen(vendorIndex: 0), // Vendor Profile Screen at index 4
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index; // Update the selected index
-    });
-  }
+  
 
   @override
   Widget build(BuildContext context) {
+    final List<Widget> _screens = [
+      const VendorHomeScreen(),
+      const VendorSearchScreen(),
+      const VendorBookingsScreen(),
+      const VendorMessagesScreen(),
+      const VendorProfileScreen(vendorIndex: 0), // Ensure vendorIndex is passed
+    ];
+
     return Scaffold(
-      body: _screens[_selectedIndex], // Show the selected screen
+      body: _screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.deepPurple, // Active icon color
-        unselectedItemColor: Colors.grey, // Inactive icon color
+        selectedItemColor: Colors.deepPurple,
+        unselectedItemColor: Colors.grey,
         showSelectedLabels: true,
         showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
-        onTap: _onItemTapped, // Handle the tap on bottom nav items
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: "Search"),
