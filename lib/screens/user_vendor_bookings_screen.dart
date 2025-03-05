@@ -37,6 +37,13 @@ class _VendorBookingsScreenState extends State<VendorBookingsScreen> {
     },
   ];
 
+  // Define theme colors
+  final Color primaryColor = Colors.deepPurple;
+  final Color lightPurple = Colors.deepPurple.shade100;
+  final Color backgroundColor = Colors.white;
+  final Color textOnPurple = Colors.white;
+  final Color textOnWhite = Colors.deepPurple.shade900;
+
   List<Map<String, dynamic>> get filteredVendors {
     if (selectedFilter == "All Vendors") {
       return vendors;
@@ -53,15 +60,15 @@ class _VendorBookingsScreenState extends State<VendorBookingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
+        backgroundColor: primaryColor,
+        elevation: 0,
         leading: IconButton(
-          icon: const FaIcon(FontAwesomeIcons.chevronLeft, color: Colors.black),
+          icon: FaIcon(FontAwesomeIcons.chevronLeft, color: textOnPurple),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text("Find Vendors", style: TextStyle(color: Colors.black)),
+        title: Text("Find Vendors", style: TextStyle(color: textOnPurple, fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
       body: Column(
@@ -75,51 +82,77 @@ class _VendorBookingsScreenState extends State<VendorBookingsScreen> {
   }
 
   Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.all(10),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: primaryColor,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
+      ),
       child: TextField(
         decoration: InputDecoration(
           prefixIcon: const Icon(FontAwesomeIcons.search, color: Colors.grey),
           hintText: "Search vendors...",
           filled: true,
-          fillColor: Colors.grey[200],
+          fillColor: Colors.white,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(30),
             borderSide: BorderSide.none,
           ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
         ),
       ),
     );
   }
 
   Widget _buildFilterBar() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Row(
-        children: filters.map((filter) => _buildFilterButton(filter)).toList(),
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: filters.map((filter) => _buildFilterButton(filter)).toList(),
+        ),
       ),
     );
   }
 
   Widget _buildFilterButton(String text) {
+    final isSelected = selectedFilter == text;
+    
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 5),
+      padding: const EdgeInsets.only(right: 10),
       child: ElevatedButton(
         onPressed: () => _setFilter(text),
         style: ElevatedButton.styleFrom(
-          backgroundColor: selectedFilter == text ? Colors.purple : Colors.grey[300],
-          foregroundColor: selectedFilter == text ? Colors.white : Colors.black,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: isSelected ? primaryColor : Colors.white,
+          foregroundColor: isSelected ? textOnPurple : primaryColor,
+          elevation: isSelected ? 2 : 0,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: isSelected ? Colors.transparent : primaryColor,
+              width: 1,
+            ),
+          ),
         ),
-        child: Text(text),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildVendorList() {
     return ListView.builder(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(16),
       itemCount: filteredVendors.length,
       itemBuilder: (context, index) {
         final vendor = filteredVendors[index];
@@ -139,19 +172,87 @@ class _VendorBookingsScreenState extends State<VendorBookingsScreen> {
         );
       },
       child: Card(
-        margin: const EdgeInsets.only(bottom: 15),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.only(bottom: 20),
+        elevation: 3,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-              child: Image.network(vendor["imageUrl"], height: 180, width: double.infinity, fit: BoxFit.cover),
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                  child: Image.network(
+                    vendor["imageUrl"], 
+                    height: 200, 
+                    width: double.infinity, 
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.85),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      vendor["category"],
+                      style: TextStyle(
+                        color: textOnPurple,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            ListTile(
-              title: Text(vendor["name"], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              subtitle: Text("${vendor["category"]} • ${vendor["rating"]}"),
-              trailing: Text(vendor["location"]),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    vendor["name"],
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textOnWhite,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.star, color: Colors.amber, size: 18),
+                      const SizedBox(width: 4),
+                      Text(
+                        vendor["rating"],
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.location_on, color: primaryColor, size: 18),
+                      const SizedBox(width: 4),
+                      Text(
+                        vendor["location"],
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -159,3 +260,4 @@ class _VendorBookingsScreenState extends State<VendorBookingsScreen> {
     );
   }
 }
+

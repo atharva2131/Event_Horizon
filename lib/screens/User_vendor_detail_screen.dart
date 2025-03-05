@@ -7,53 +7,99 @@ class VendorDetailScreen extends StatelessWidget {
 
   const VendorDetailScreen({super.key, required this.vendor});
 
+  // Define theme colors
+  static const Color primaryColor = Colors.deepPurple;
+  static const Color lightPurple = Color(0xFFD1C4E9); // Deep Purple 100
+  static const Color backgroundColor = Colors.white;
+  static const Color textOnPurple = Colors.white;
+  static const Color textOnWhite = Color(0xFF311B92); // Deep Purple 900
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(vendor["name"], style: const TextStyle(color: Colors.black)),
-        centerTitle: true,
+      backgroundColor: backgroundColor,
+      body: CustomScrollView(
+        slivers: [
+          _buildSliverAppBar(context),
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildVendorInfo(context),
+                _buildDescription(),
+                _buildGallery(),
+                const SizedBox(height: 20),
+                _buildBookNowButton(context),
+                const SizedBox(height: 30), // Extra padding at bottom
+              ],
+            ),
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  /// 🖼️ **Sliver App Bar with Banner Image**
+  Widget _buildSliverAppBar(BuildContext context) {
+    return SliverAppBar(
+      expandedHeight: 280,
+      pinned: true,
+      backgroundColor: primaryColor,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
+      ),
+      flexibleSpace: FlexibleSpaceBar(
+        background: Stack(
+          fit: StackFit.expand,
           children: [
-            _buildBannerImage(),
-            _buildVendorInfo(context), 
-            _buildDescription(),
-            _buildGallery(),
-            const SizedBox(height: 20),
-            _buildBookNowButton(context),
+            // Banner image
+            Image.network(
+              vendor["imageUrl"],
+              fit: BoxFit.cover,
+            ),
+            // Gradient overlay for better text visibility
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.5),
+                  ],
+                ),
+              ),
+            ),
+            // Category badge
+            Positioned(
+              top: 100,
+              right: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: primaryColor,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  vendor["category"],
+                  style: const TextStyle(
+                    color: textOnPurple,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  /// 🖼️ **Main Banner Image**
-  Widget _buildBannerImage() {
-    return ClipRRect(
-      borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)),
-      child: Image.network(
-        vendor["imageUrl"],
-        width: double.infinity,
-        height: 250,
-        fit: BoxFit.cover,
-      ),
-    );
-  }
-
   /// ℹ️ **Vendor Info Section**
   Widget _buildVendorInfo(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
+    return Container(
+      padding: const EdgeInsets.all(20.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -63,21 +109,38 @@ class VendorDetailScreen extends StatelessWidget {
               children: [
                 Text(
                   vendor["name"],
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 24, 
+                    fontWeight: FontWeight.bold,
+                    color: textOnWhite,
+                  ),
                 ),
-                const SizedBox(height: 5),
-                Text(
-                  "${vendor["category"]} • ${vendor["rating"]}",
-                  style: const TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(FontAwesomeIcons.mapMarkerAlt, color: Colors.purple, size: 16),
-                    const SizedBox(width: 5),
+                    const Icon(Icons.star, color: Colors.amber, size: 18),
+                    const SizedBox(width: 4),
+                    Text(
+                      vendor["rating"],
+                      style: TextStyle(
+                        fontSize: 16, 
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(FontAwesomeIcons.mapMarkerAlt, color: primaryColor, size: 16),
+                    const SizedBox(width: 8),
                     Text(
                       vendor["location"],
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                        fontSize: 16, 
+                        color: Colors.grey[800],
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
@@ -103,35 +166,61 @@ class VendorDetailScreen extends StatelessWidget {
         );
       },
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.purple,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        backgroundColor: primaryColor,
+        foregroundColor: textOnPurple,
+        shape: const CircleBorder(),
+        padding: const EdgeInsets.all(12),
         elevation: 3,
       ),
-      child: const Icon(FontAwesomeIcons.commentDots, size: 16, color: Colors.white),
+      child: const Icon(FontAwesomeIcons.commentDots, size: 20),
     );
   }
 
   /// 📝 **Vendor Description**
   Widget _buildDescription() {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
       child: Card(
-        elevation: 3,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "About Vendor",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: lightPurple,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      FontAwesomeIcons.infoCircle, 
+                      color: primaryColor, 
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    "About Vendor",
+                    style: TextStyle(
+                      fontSize: 18, 
+                      fontWeight: FontWeight.bold,
+                      color: textOnWhite,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
               Text(
-                "${vendor["name"]} is a top-rated service provider known for excellence and professionalism.",
-                style: const TextStyle(fontSize: 14, height: 1.5),
-                textAlign: TextAlign.center,
+                "${vendor["name"]} is a top-rated service provider known for excellence and professionalism. With years of experience in the industry, they deliver exceptional service tailored to your specific needs and preferences.",
+                style: TextStyle(
+                  fontSize: 15, 
+                  height: 1.6,
+                  color: Colors.grey[800],
+                ),
               ),
             ],
           ),
@@ -149,23 +238,62 @@ class VendorDetailScreen extends StatelessWidget {
     ];
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Gallery", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: lightPurple,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  FontAwesomeIcons.images, 
+                  color: primaryColor, 
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                "Gallery",
+                style: TextStyle(
+                  fontSize: 18, 
+                  fontWeight: FontWeight.bold,
+                  color: textOnWhite,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           SizedBox(
-            height: 120,
+            height: 140,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: images.length,
               itemBuilder: (context, index) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 10),
+                return Container(
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.network(images[index], width: 120, height: 120, fit: BoxFit.cover),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      images[index], 
+                      width: 140, 
+                      height: 140, 
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 );
               },
@@ -179,25 +307,53 @@ class VendorDetailScreen extends StatelessWidget {
   /// ✅ **Book Now Button**
   Widget _buildBookNowButton(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: SizedBox(
         width: double.infinity,
+        height: 56,
         child: ElevatedButton(
           key: const Key('bookNowButton'),
           onPressed: () {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Booking Confirmed!"), duration: Duration(seconds: 1)),
+              SnackBar(
+                content: const Text(
+                  "Booking Confirmed!",
+                  style: TextStyle(color: Colors.white),
+                ),
+                backgroundColor: primaryColor,
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
             );
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.purple,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            backgroundColor: primaryColor,
+            foregroundColor: textOnPurple,
+            elevation: 3,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+            ),
           ),
-          child: const Text("Book Now", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(FontAwesomeIcons.calendarCheck, size: 18),
+              SizedBox(width: 12),
+              Text(
+                "Book Now",
+                style: TextStyle(
+                  fontSize: 18, 
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
+
