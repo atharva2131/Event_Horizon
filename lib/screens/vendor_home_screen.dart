@@ -243,9 +243,12 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
       _buildStatCard(Icons.calendar_today, "New Bookings", "3", onTap: () {
-        Navigator.push(
+        Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const vendorBookings.VendorBookingsScreen()),
+          MaterialPageRoute(
+            builder: (context) => const VendorBottomNavScreen(initialIndex: 2),
+
+          ),
         );
       }),
       _buildStatCard(Icons.star, "Pending Reviews", "2"),
@@ -253,6 +256,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
     ],
   );
 }
+
 
 
 

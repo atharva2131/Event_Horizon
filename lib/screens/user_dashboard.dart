@@ -61,7 +61,7 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
           BottomNavigationBarItem(icon: Icon(Icons.event), label: "Events"),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: "Bookings"),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: "Vendors"),
           BottomNavigationBarItem(icon: Icon(Icons.message), label: "Messages"),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
         ],
