@@ -418,58 +418,6 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
               ),
             ],
           ),
-<<<<<<< HEAD
-=======
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(color: Colors.green[100], borderRadius: BorderRadius.circular(8)),
-            child: const Text("Active", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-
- Widget _buildStatsGrid(BuildContext context) {
-  return Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      _buildStatCard(Icons.calendar_today, "New Bookings", "3", onTap: () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const VendorBottomNavScreen(initialIndex: 2),
-
-          ),
-        );
-      }),
-      _buildStatCard(Icons.star, "Pending Reviews", "2"),
-      _buildStatCard(Icons.attach_money, "Total Revenue", "\$2,450"),
-    ],
-  );
-}
-
-
-
-
- Widget _buildStatCard(IconData icon, String title, String value, {VoidCallback? onTap}) {
-  return Expanded(
-    child: GestureDetector(
-      onTap: onTap, // Handle navigation when tapped
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.all(12),
-        decoration: _boxDecoration(),
-        child: Column(
-          children: [
-            Icon(icon, color: Colors.blue, size: 28),
-            const SizedBox(height: 8),
-            Text(title, style: const TextStyle(color: Colors.grey)),
-            Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          ],
->>>>>>> 3a50cd4eb048ffe8f41985af9a500b2ede661475
         ),
       ),
     );
@@ -764,7 +712,6 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
       ],
     );
   }
-<<<<<<< HEAD
 }
 
 class _ProfileStat extends StatelessWidget {
@@ -796,6 +743,4 @@ class _ProfileStat extends StatelessWidget {
       ],
     );
   }
-=======
->>>>>>> 3a50cd4eb048ffe8f41985af9a500b2ede661475
 }
