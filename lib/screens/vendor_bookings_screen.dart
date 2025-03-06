@@ -12,6 +12,24 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primaryColor: const Color(0xFF4A148C), // Deep Purple 900
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF4A148C),
+          primary: const Color(0xFF4A148C),
+          secondary: const Color(0xFF7C43BD), // Lighter purple
+          background: Colors.white,
+        ),
+        fontFamily: 'Poppins',
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+      ),
       home: const VendorBookingsScreen(),
     );
   }
@@ -25,7 +43,9 @@ class VendorBookingsScreen extends StatefulWidget {
   _VendorBookingsScreenState createState() => _VendorBookingsScreenState();
 }
 
-class _VendorBookingsScreenState extends State<VendorBookingsScreen> {
+class _VendorBookingsScreenState extends State<VendorBookingsScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
   // List of notifications
   List<NotificationItem> notifications = [
     NotificationItem(
@@ -36,6 +56,7 @@ class _VendorBookingsScreenState extends State<VendorBookingsScreen> {
       location: "Downtown Salon",
       price: "\$75.00",
       imageUrl: "https://placehold.co/40x40",
+      status: "pending",
     ),
     NotificationItem(
       name: "John Cooper",
@@ -45,6 +66,7 @@ class _VendorBookingsScreenState extends State<VendorBookingsScreen> {
       location: "Main Street Barbershop",
       price: "\$35.00",
       imageUrl: "https://placehold.co/40x40",
+      status: "pending",
     ),
     NotificationItem(
       name: "Emma Wilson",
@@ -54,127 +76,386 @@ class _VendorBookingsScreenState extends State<VendorBookingsScreen> {
       location: "Beauty Corner",
       price: "\$45.00",
       imageUrl: "https://placehold.co/40x40",
+      status: "pending",
+    ),
+    NotificationItem(
+      name: "Michael Brown",
+      timeAgo: "3 hours ago",
+      service: "Full Body Massage",
+      schedule: "Feb 16, 10:00 AM",
+      location: "Wellness Spa",
+      price: "\$120.00",
+      imageUrl: "https://placehold.co/40x40",
+      status: "pending",
     ),
   ];
+
+  List<NotificationItem> acceptedBookings = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[200], // Background color
+      backgroundColor: Colors.grey[50], // Light background
       appBar: AppBar(
-        title: const Text("Notifications"),
-        backgroundColor: Colors.white,
-        elevation: 2,
+        title: const Text(
+          "Booking Requests",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: const Color(0xFF4A148C), // Deep Purple
+        elevation: 0,
         centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: notifications.map((notification) {
-            return _buildNotificationCard(context, notification);
-          }).toList(),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          tabs: const [
+            Tab(text: "New Requests"),
+            Tab(text: "Accepted"),
+          ],
         ),
       ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // New Requests Tab
+          notifications.isEmpty
+              ? _buildEmptyState("No new booking requests")
+              : _buildNotificationList(notifications),
+
+          // Accepted Tab
+          acceptedBookings.isEmpty
+              ? _buildEmptyState("No accepted bookings yet")
+              : _buildNotificationList(acceptedBookings),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.calendar_today_outlined,
+            size: 80,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationList(List<NotificationItem> items) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        return _buildNotificationCard(context, items[index]);
+      },
     );
   }
 
   Widget _buildNotificationCard(BuildContext context, NotificationItem notification) {
-    return GestureDetector(
-      onTap: () {
-        // Navigate to BookingRequestsPage and pass the data
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => BookingRequestsPage(
-              name: notification.name,
-              service: notification.service,
-              schedule: notification.schedule,
-              location: notification.location,
-              price: notification.price,
-              imageUrl: notification.imageUrl,
-            ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade200,
+            blurRadius: 10,
+            offset: const Offset(0, 5),
           ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(color: Colors.grey.shade300, blurRadius: 5),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with avatar and status
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F0FF), // Very light purple
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundImage: NetworkImage(notification.imageUrl),
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: const Color(0xFF4A148C).withOpacity(0.3),
+                      width: 2,
+                    ),
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  child: CircleAvatar(
+                    radius: 25,
+                    backgroundImage: NetworkImage(notification.imageUrl),
+                  ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(notification.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      Text(notification.timeAgo, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                      Text(
+                        notification.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF4A148C),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.access_time,
+                            size: 14,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            notification.timeAgo,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.blue[100],
-                    borderRadius: BorderRadius.circular(5),
+                    color: notification.status == "pending"
+                        ? const Color(0xFF7C43BD).withOpacity(0.2)
+                        : const Color(0xFF4CAF50).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text("New Request", style: TextStyle(color: Colors.blue, fontSize: 12)),
+                  child: Text(
+                    notification.status == "pending" ? "New Request" : "Accepted",
+                    style: TextStyle(
+                      color: notification.status == "pending"
+                          ? const Color(0xFF7C43BD)
+                          : const Color(0xFF4CAF50),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            Text(notification.service, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            Text(notification.schedule, style: const TextStyle(color: Colors.grey, fontSize: 14)),
-            Text(notification.location, style: const TextStyle(color: Colors.grey, fontSize: 14)),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ),
+
+          // Service details
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(notification.price, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                // Service type with icon
                 Row(
                   children: [
-                    _buildActionButton(context, "Accept", Colors.blue, Icons.check, true, notification),
-                    const SizedBox(width: 8),
-                    _buildActionButton(context, "Reject", Colors.grey, Icons.close, false, notification),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4A148C).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.spa,
+                        color: Color(0xFF4A148C),
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        notification.service,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Schedule and location info
+                _buildInfoRow(Icons.calendar_today, notification.schedule),
+                const SizedBox(height: 8),
+                _buildInfoRow(Icons.location_on, notification.location),
+
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 16),
+
+                // Price and action buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Text(
+                          "Price: ",
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        Text(
+                          notification.price,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF4A148C),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (notification.status == "pending")
+                      Row(
+                        children: [
+                          _buildActionButton(
+                            context,
+                            "Reject",
+                            Colors.grey[300]!,
+                            Colors.grey[700]!,
+                            Icons.close,
+                            false,
+                            notification,
+                          ),
+                          const SizedBox(width: 10),
+                          _buildActionButton(
+                            context,
+                            "Accept",
+                            const Color(0xFF4A148C),
+                            Colors.white,
+                            Icons.check,
+                            true,
+                            notification,
+                          ),
+                        ],
+                      ),
+                    if (notification.status == "accepted")
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          // Navigate to details page
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => BookingRequestsPage(
+                                name: notification.name,
+                                service: notification.service,
+                                schedule: notification.schedule,
+                                location: notification.location,
+                                price: notification.price,
+                                imageUrl: notification.imageUrl,
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.visibility, size: 18),
+                        label: const Text("View Details"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4A148C),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        ),
+                      ),
                   ],
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildActionButton(BuildContext context, String label, Color color, IconData icon, bool isAccept, NotificationItem notification) {
+  Widget _buildInfoRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: Colors.grey[600],
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 15,
+              color: Colors.grey[800],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton(
+    BuildContext context,
+    String label,
+    Color backgroundColor,
+    Color textColor,
+    IconData icon,
+    bool isAccept,
+    NotificationItem notification,
+  ) {
     return ElevatedButton.icon(
       onPressed: () {
         if (isAccept) {
-          // Navigate to the BookingRequestsPage with the details
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => BookingRequestsPage(
-                name: notification.name,
-                service: notification.service,
-                schedule: notification.schedule,
-                location: notification.location,
-                price: notification.price,
-                imageUrl: notification.imageUrl,
-              ),
+          setState(() {
+            // Update status
+            notification.status = "accepted";
+
+            // Remove from notifications and add to accepted
+            notifications.remove(notification);
+            acceptedBookings.add(notification);
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Booking Accepted!"),
+              backgroundColor: const Color(0xFF4CAF50),
+              behavior: SnackBarBehavior.floating,
             ),
           );
         } else {
@@ -185,10 +466,10 @@ class _VendorBookingsScreenState extends State<VendorBookingsScreen> {
       icon: Icon(icon, size: 18),
       label: Text(label),
       style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        textStyle: const TextStyle(fontSize: 14),
+        backgroundColor: backgroundColor,
+        foregroundColor: textColor,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        elevation: 0,
       ),
     );
   }
@@ -198,27 +479,47 @@ class _VendorBookingsScreenState extends State<VendorBookingsScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Are you sure?'),
-          content: const Text('Do you want to reject this booking request?'),
+          title: const Text(
+            'Reject Booking Request',
+            style: TextStyle(
+              color: Color(0xFF4A148C),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text('Are you sure you want to reject this booking request?'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();  // Close the dialog
+                Navigator.of(context).pop(); // Close the dialog
               },
-              child: const Text('No'),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.grey),
+              ),
             ),
-            TextButton(
+            ElevatedButton(
               onPressed: () {
                 setState(() {
                   // Remove the notification from the list
                   notifications.remove(notification);
                 });
-                Navigator.of(context).pop();  // Close the dialog
+                Navigator.of(context).pop(); // Close the dialog
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Booking Rejected!")),
+                  const SnackBar(
+                    content: Text("Booking Rejected"),
+                    backgroundColor: Colors.redAccent,
+                    behavior: SnackBarBehavior.floating,
+                  ),
                 );
               },
-              child: const Text('Yes'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4A148C),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Reject'),
             ),
           ],
         );
@@ -236,6 +537,7 @@ class NotificationItem {
   final String location;
   final String price;
   final String imageUrl;
+  String status; // "pending" or "accepted"
 
   NotificationItem({
     required this.name,
@@ -245,5 +547,6 @@ class NotificationItem {
     required this.location,
     required this.price,
     required this.imageUrl,
+    required this.status,
   });
 }

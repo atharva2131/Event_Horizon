@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'SignInPage.dart'; // Import SignInPage
-import 'package:eventhorizon/widgets/RoleCard.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
