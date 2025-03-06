@@ -5,9 +5,9 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class SignInPage extends StatefulWidget {
-  final bool isUser; // To differentiate User or Vendor
+  final bool isUser ; // To differentiate User or Vendor
 
-  const SignInPage({super.key, required this.isUser});
+  const SignInPage({super.key, required this.isUser });
 
   @override
   _SignInPageState createState() => _SignInPageState();
@@ -15,6 +15,25 @@ class SignInPage extends StatefulWidget {
 
 class _SignInPageState extends State<SignInPage> {
   bool isSignIn = true;
+
+  // Controllers for the text fields
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+
+  // Form keys for validation
+  final _signInFormKey = GlobalKey<FormState>();
+  final _signUpFormKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _fullNameController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,27 +125,33 @@ class _SignInPageState extends State<SignInPage> {
   // Sign-In Form
   Widget signInForm() {
     return cardContainer(
-      Column(
-        children: [
-          textField('Email or Phone', Icons.email),
-          const SizedBox(height: 16),
-          textField('Password', Icons.lock, obscureText: true),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () {}, // Forgot password action
-              child: const Text('Forgot Password?', style: TextStyle(color: Colors.deepPurple)),
-            ),
-          ),
-          actionButton('Sign In', () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => widget.isUser ? UserDashboard() : VendorDashboard(),
+      Form(
+        key: _signInFormKey,
+        child: Column(
+          children: [
+            textField('Email or Phone', Icons.email, controller: _emailController),
+            const SizedBox(height: 16),
+            textField('Password', Icons.lock, obscureText: true, controller: _passwordController),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () {}, // Forgot password action
+                child: const Text('Forgot Password?', style: TextStyle(color: Colors.deepPurple)),
               ),
-            );
-          }),
-        ],
+            ),
+            actionButton('Sign In', () {
+              if (_signInFormKey.currentState!.validate()) {
+                // Perform sign-in logic here
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => widget.isUser  ? UserDashboard() : VendorDashboard(),
+                  ),
+                );
+              }
+            }),
+          ],
+        ),
       ),
     );
   }
@@ -134,32 +159,39 @@ class _SignInPageState extends State<SignInPage> {
   // Sign-Up Form
   Widget signUpForm() {
     return cardContainer(
-      Column(
-        children: [
-          textField('Full Name', Icons.person),
-          const SizedBox(height: 16),
-          textField('Email', Icons.email),
-          const SizedBox(height: 16),
-          textField('Phone Number', Icons.phone),
-          const SizedBox(height: 16),
-          textField('Password', Icons.lock, obscureText: true),
-          const SizedBox(height: 20), // Added gap between Password and Sign Up button
-        actionButton('Sign Up', () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => widget.isUser ? UserDashboard() : VendorDashboard(),
-              ),
-            );
-          }),
-        ],
+      Form(
+        key: _signUpFormKey,
+        child: Column(
+          children: [
+            textField('Full Name', Icons.person, controller: _fullNameController),
+            const SizedBox(height: 16),
+            textField('Email', Icons.email, controller: _emailController),
+            const SizedBox(height: 16),
+            textField('Phone Number', Icons.phone, controller: _phoneController),
+            const SizedBox(height: 16),
+            textField('Password', Icons.lock, obscureText: true, controller: _passwordController),
+            const SizedBox(height: 20), // Added gap between Password and Sign Up button
+            actionButton('Sign Up', () {
+              if (_signUpFormKey.currentState!.validate()) {
+                // Perform sign-up logic here
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => widget.isUser  ? UserDashboard() : VendorDashboard(),
+                  ),
+                );
+              }
+            }),
+          ],
+        ),
       ),
     );
   }
 
   // Custom Input Field
-  Widget textField(String label, IconData icon, {bool obscureText = false}) {
-    return TextField(
+  Widget textField(String label, IconData icon, {bool obscureText = false, TextEditingController? controller}) {
+    return TextFormField(
+      controller: controller,
       obscureText: obscureText,
       decoration: InputDecoration(
         labelText: label,
@@ -168,6 +200,27 @@ class _SignInPageState extends State<SignInPage> {
         filled: true,
         fillColor: Colors.grey[100],
       ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please enter your $label';
+        }
+        if (label == 'Email' || label == 'Email or Phone') {
+          final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+          if (!emailRegex.hasMatch(value)) {
+            return 'Please enter a valid email address';
+          }
+        }
+        if (label == 'Phone Number') {
+          final phoneRegex = RegExp(r'^\+?[0-9]{10,15}$');
+          if (!phoneRegex.hasMatch(value)) {
+            return 'Please enter a valid phone number';
+          }
+        }
+        if (label == 'Password' && value.length < 6) {
+          return 'Password must be at least 6 characters long';
+        }
+        return null;
+      },
     );
   }
 

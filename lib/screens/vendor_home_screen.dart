@@ -1,6 +1,4 @@
 import 'dart:io';
-import 'package:eventhorizon/screens/user_vendor_bookings_screen.dart';
-import 'package:eventhorizon/screens/vendor_bookings_screen.dart';
 import 'package:eventhorizon/widgets/vendor_bottom_nav_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
