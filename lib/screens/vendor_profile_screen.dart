@@ -1,17 +1,9 @@
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
 import 'package:eventhorizon/screens/Vendor_AccountSettingsScreen.dart';
 import 'package:eventhorizon/screens/vendor_notifications_screen.dart';
 import 'package:eventhorizon/screens/vendor_payment_methods_screen.dart';
 import 'package:eventhorizon/screens/vendor_help_support_screen.dart';
 import 'package:eventhorizon/screens/vendor_privacy_terms_screen.dart';
-=======
-import 'Vendor_AccountSettingsScreen.dart';
-import 'package:eventhorizon/screens/Vendor_notifications_screen.dart';
-import 'package:eventhorizon/screens/Vendor_payment_methods_screen.dart';
-import 'package:eventhorizon/screens/Vendor_help_support_screen.dart';
-import 'package:eventhorizon/screens/Vendor_privacy_terms_screen.dart';
->>>>>>> a7b4ea1910d6933763b26c5c76eb31d9f5b81fb8
 
 class VendorProfileScreen extends StatefulWidget {
   final int vendorIndex;
@@ -47,7 +39,6 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-<<<<<<< HEAD
         elevation: 0,
         backgroundColor: primaryColor,
         title: const Text(
@@ -302,166 +293,11 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
             
             const SizedBox(height: 30),
           ],
-=======
-        title: const Text('Vendor Profile'),
-        backgroundColor: Colors.deepPurple,
-      ),
-      body: Container(
-        color: Colors.white,
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Column(
-                    children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundImage: NetworkImage(profilePicture),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        name,
-                        style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.deepPurple),
-                      ),
-                      Text(
-                        email,
-                        style: const TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Icon(Icons.star, color: Colors.amber),
-                          Text('4.8 (95 reviews)',
-                              style: TextStyle(fontSize: 16)),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Horizontal statistics row
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildStatistic('7', 'Ongoing Orders'),
-                      const SizedBox(width: 20),
-                      _buildStatistic('\$35.6k', 'Earnings'),
-                      const SizedBox(width: 20),
-                      _buildStatistic('4.8', 'Client Rating'),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Active Collaborations',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-
-                // Horizontal collaborators row
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildCollaborator('Sophia Lee', 'Florist',
-                          'https://via.placeholder.com/150'),
-                      _buildCollaborator('Daniel Smith', 'Lighting Expert',
-                          'https://via.placeholder.com/150'),
-                      _buildCollaborator('Emily Davis', 'Caterer',
-                          'https://via.placeholder.com/150'),
-                    ],
-                  ),
-                ),
-
-                TextButton(
-                  onPressed: () {},
-                  child: const Text('See All'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.deepPurple,
-                    backgroundColor: Colors.white,
-                    side: BorderSide(color: Colors.deepPurple),
-                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                const Text(
-                  'Settings & Preferences',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-
-                _buildSettingOption(
-                  'Account Settings',
-                  context,
-                  () async {
-                    final updatedData = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AccountSettingsScreen(
-                          name: name,
-                          email: email,
-                          profilePicture: profilePicture,
-                        ),
-                      ),
-                    );
-                    if (updatedData != null) {
-                      _updateProfile(updatedData['name'], updatedData['email'],
-                          updatedData['profilePicture']);
-                    }
-                  },
-                ),
-                _buildSettingOption(
-                  'Notifications',
-                  context,
-                  () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => NotificationsScreen())),
-                ),
-                _buildSettingOption(
-                  'Payment Methods',
-                  context,
-                  () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => PaymentMethodsScreen())),
-                ),
-                _buildSettingOption(
-                  'Help & Support',
-                  context,
-                  () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => HelpSupportScreen())),
-                ),
-                _buildSettingOption(
-                  'Privacy & Terms',
-                  context,
-                  () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => PrivacyTermsScreen())),
-                ),
-              ],
-            ),
-          ),
->>>>>>> a7b4ea1910d6933763b26c5c76eb31d9f5b81fb8
         ),
       ),
     );
   }
 
-<<<<<<< HEAD
   Widget _buildStatisticCard(String value, String label, IconData icon) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
@@ -476,27 +312,17 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
           ),
         ],
       ),
-=======
-  Widget _buildStatistic(String value, String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0),
->>>>>>> a7b4ea1910d6933763b26c5c76eb31d9f5b81fb8
       child: Column(
         children: [
           Icon(icon, color: accentColor),
           const SizedBox(height: 8),
           Text(
             value,
-<<<<<<< HEAD
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: primaryColor,
             ),
-=======
-            style: const TextStyle(
-                fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurple),
->>>>>>> a7b4ea1910d6933763b26c5c76eb31d9f5b81fb8
           ),
           Text(
             label,
@@ -528,7 +354,6 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
             ),
           ),
           const SizedBox(height: 8),
-<<<<<<< HEAD
           Text(
             name,
             style: const TextStyle(
@@ -549,10 +374,6 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-=======
-          Text(name, style: const TextStyle(color: Colors.deepPurple)),
-          Text(role, style: const TextStyle(color: Colors.grey)),
->>>>>>> a7b4ea1910d6933763b26c5c76eb31d9f5b81fb8
         ],
       ),
     );
@@ -561,7 +382,6 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
   Widget _buildSettingOption(
       String title, IconData icon, BuildContext context, VoidCallback onTap) {
     return ListTile(
-<<<<<<< HEAD
       leading: Icon(icon, color: primaryColor),
       title: Text(
         title,
@@ -587,11 +407,4 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
       color: Colors.grey.shade200,
     );
   }
-=======
-      title: Text(title, style: const TextStyle(color: Colors.deepPurple)),
-      trailing: const Icon(Icons.arrow_forward_ios, color: Colors.deepPurple),
-      onTap: onTap,
-    );
-  }
->>>>>>> a7b4ea1910d6933763b26c5c76eb31d9f5b81fb8
 }
