@@ -422,10 +422,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => EventDetailScreen(
-                            event: Map<String, String>.from(event),
+                            event: event,
                           ),
                         ),
-                      );
+                      ).then((value) {
+                        if (value != null && value is Map<String, dynamic>) {
+                          setState(() {
+                            events[index] = value;
+                          });
+                          _saveEvents();
+                        }
+                      });
                     },
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 16),
@@ -494,6 +501,25 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   ],
                                 ),
+                                const SizedBox(height: 8),
+                                if (event['guests'] != null && (event['guests'] as List).isNotEmpty)
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.people,
+                                        size: 16,
+                                        color: Colors.grey[600],
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        "${(event['guests'] as List).length} guests",
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                               ],
                             ),
                           ),
