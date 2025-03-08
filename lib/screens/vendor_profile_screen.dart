@@ -4,6 +4,9 @@ import 'package:eventhorizon/screens/vendor_notifications_screen.dart';
 import 'package:eventhorizon/screens/vendor_payment_methods_screen.dart';
 import 'package:eventhorizon/screens/vendor_help_support_screen.dart';
 import 'package:eventhorizon/screens/vendor_privacy_terms_screen.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class VendorProfileScreen extends StatefulWidget {
   final int vendorIndex;
@@ -15,23 +18,129 @@ class VendorProfileScreen extends StatefulWidget {
 }
 
 class _VendorProfileScreenState extends State<VendorProfileScreen> {
-  String name = 'Michael Carter';
-  String email = 'michael@example.com';
-  String profilePicture = 'https://via.placeholder.com/150';
-
   // Define our theme colors
   final Color primaryColor = const Color(0xFF4A148C); // Deep Purple 900
   final Color accentColor = const Color(0xFF7C43BD); // Lighter purple
   final Color backgroundColor = Colors.white;
   final Color cardColor = const Color(0xFFF5F0FF); // Very light purple
 
+  Map<String, dynamic> vendorProfile = {};
+  bool isLoading = true;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVendorProfile();
+  }
+
+  Future<void> _loadVendorProfile() async {
+    setState(() => isLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      
+      if (token == null) {
+        setState(() {
+          errorMessage = 'Authentication token not found. Please login again.';
+          isLoading = false;
+        });
+        return;
+      }
+      
+      final response = await http.get(
+        Uri.parse('http://127.0.0.1:3000/api/auth/me'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        setState(() {
+          vendorProfile = responseData['user'] ?? {};
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          errorMessage = 'Failed to load profile: ${response.statusCode}';
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error loading profile: $e';
+        isLoading = false;
+      });
+    }
+  }
+
   void _updateProfile(
-      String updatedName, String updatedEmail, String updatedPhoto) {
-    setState(() {
-      name = updatedName;
-      email = updatedEmail;
-      profilePicture = updatedPhoto;
-    });
+      String updatedName, String updatedEmail, String updatedPhoto) async {
+    setState(() => isLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      
+      if (token == null) {
+        setState(() {
+          errorMessage = 'Authentication token not found. Please login again.';
+          isLoading = false;
+        });
+        return;
+      }
+      
+      final response = await http.put(
+        Uri.parse('http://127.0.0.1:3000/api/auth/update-profile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'name': updatedName,
+          'email': updatedEmail,
+          'avatar_url': updatedPhoto,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        setState(() {
+          vendorProfile = responseData['user'] ?? {};
+          isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully')),
+        );
+      } else {
+        setState(() {
+          errorMessage = 'Failed to update profile: ${response.statusCode}';
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error updating profile: $e';
+        isLoading = false;
+      });
+    }
+  }
+
+  void _logout(BuildContext context) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('token');
+      await prefs.remove('userData');
+      
+      // Navigate to login screen
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error logging out: $e')),
+      );
+    }
   }
 
   @override
@@ -60,241 +169,295 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Profile header with gradient background
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [primaryColor, accentColor],
-                ),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
-              ),
-              padding: const EdgeInsets.only(
-                  left: 20, right: 20, top: 20, bottom: 40),
-              child: Column(
-                children: [
-                  // Profile image with border
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 4),
-                    ),
-                    child: CircleAvatar(
-                      radius: 50,
-                      backgroundImage: NetworkImage(profilePicture),
+      body: isLoading 
+          ? Center(child: CircularProgressIndicator(color: primaryColor))
+          : errorMessage != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
+                        const SizedBox(height: 16),
+                        Text(
+                          errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.red[700]),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _loadVendorProfile,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                          ),
+                          child: const Text('Retry'),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  Text(
-                    email,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.white70,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                )
+              : SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.star, color: Colors.amber, size: 20),
-                      const SizedBox(width: 4),
-                      const Text(
-                        '4.8',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '(95 reviews)',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withOpacity(0.8),
-                        ),
-                      ),
+                      _buildProfileHeader(),
+                      const SizedBox(height: 20),
+                      _buildStatistics(),
+                      const SizedBox(height: 24),
+                      _buildActiveCollaborations(),
+                      const SizedBox(height: 24),
+                      _buildSettingsAndPreferences(),
+                      const SizedBox(height: 30),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
+                ),
+    );
+  }
 
-            // Statistics cards
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildStatisticCard('7', 'Ongoing Orders', Icons.assignment),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatisticCard('\$35.6k', 'Earnings', Icons.attach_money),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatisticCard('4.8', 'Rating', Icons.star),
-                  ),
-                ],
-              ),
+  Widget _buildProfileHeader() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [primaryColor, accentColor],
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
+      padding: const EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 40),
+      child: Column(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 4),
             ),
-            
-            const SizedBox(height: 24),
-            
-            // Active Collaborations
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Active Collaborations',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: Text(
-                      'See All',
-                      style: TextStyle(
-                        color: primaryColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            child: CircleAvatar(
+              radius: 50,
+              backgroundImage: NetworkImage(vendorProfile['avatar_url'] ?? "https://via.placeholder.com/150"),
             ),
-            
-            // Collaborators list
-            SizedBox(
-              height: 120,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  _buildCollaborator('Sophia Lee', 'Florist', 'https://via.placeholder.com/150'),
-                  _buildCollaborator('Daniel Smith', 'Lighting Expert', 'https://via.placeholder.com/150'),
-                  _buildCollaborator('Emily Davis', 'Caterer', 'https://via.placeholder.com/150'),
-                  _buildCollaborator('John Wilson', 'DJ', 'https://via.placeholder.com/150'),
-                ],
-              ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            vendorProfile['name'] ?? "Vendor Name",
+            style: const TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
             ),
-            
-            const SizedBox(height: 24),
-            
-            // Settings & Preferences
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: const Text(
-                'Settings & Preferences',
+          ),
+          Text(
+            vendorProfile['email'] ?? "vendor@example.com",
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.white70,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.star, color: Colors.amber, size: 20),
+              const SizedBox(width: 4),
+              Text(
+                '${vendorProfile['rating'] ?? "0.0"}',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '(${vendorProfile['reviews_count'] ?? "0"} reviews)',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white.withOpacity(0.8),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatistics() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildStatisticCard(
+              vendorProfile['ongoing_orders']?.toString() ?? "0",
+              'Ongoing Orders',
+              Icons.assignment,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildStatisticCard(
+              '\$${vendorProfile['total_earnings']?.toString() ?? "0"}',
+              'Earnings',
+              Icons.attach_money,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildStatisticCard(
+              vendorProfile['rating']?.toString() ?? "0.0",
+              'Rating',
+              Icons.star,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActiveCollaborations() {
+    // This would ideally be fetched from the backend
+    List<Map<String, String>> collaborators = [
+      {'name': 'Sophia Lee', 'role': 'Florist', 'image': 'https://via.placeholder.com/150'},
+      {'name': 'Daniel Smith', 'role': 'Lighting Expert', 'image': 'https://via.placeholder.com/150'},
+      {'name': 'Emily Davis', 'role': 'Caterer', 'image': 'https://via.placeholder.com/150'},
+      {'name': 'John Wilson', 'role': 'DJ', 'image': 'https://via.placeholder.com/150'},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Active Collaborations',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-            
-            const SizedBox(height: 12),
-            
-            // Settings options
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(16),
+              TextButton(
+                onPressed: () {},
+                child: Text(
+                  'See All',
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-              child: Column(
-                children: [
-                  _buildSettingOption(
-                    'Account Settings',
-                    Icons.person_outline,
-                    context,
-                    () async {
-                      final updatedData = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => AccountSettingsScreen(
-                            name: name,
-                            email: email,
-                            profilePicture: profilePicture,
-                          ),
-                        ),
-                      );
-                      if (updatedData != null) {
-                        _updateProfile(updatedData['name'], updatedData['email'],
-                            updatedData['profilePicture']);
-                      }
-                    },
-                  ),
-                  _buildDivider(),
-                  _buildSettingOption(
-                    'Notifications',
-                    Icons.notifications_outlined,
-                    context,
-                    () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => NotificationsScreen())),
-                  ),
-                  _buildDivider(),
-                  _buildSettingOption(
-                    'Payment Methods',
-                    Icons.credit_card_outlined,
-                    context,
-                    () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => PaymentMethodsScreen())),
-                  ),
-                  _buildDivider(),
-                  _buildSettingOption(
-                    'Help & Support',
-                    Icons.help_outline,
-                    context,
-                    () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => HelpSupportScreen())),
-                  ),
-                  _buildDivider(),
-                  _buildSettingOption(
-                    'Privacy & Terms',
-                    Icons.privacy_tip_outlined,
-                    context,
-                    () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => PrivacyTermsScreen())),
-                  ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 30),
-          ],
+            ],
+          ),
         ),
-      ),
+        SizedBox(
+          height: 120,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: collaborators.map((collaborator) => 
+              _buildCollaborator(collaborator['name']!, collaborator['role']!, collaborator['image']!)
+            ).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSettingsAndPreferences() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+            'Settings & Preferences',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            children: [
+              _buildSettingOption(
+                'Account Settings',
+                Icons.person_outline,
+                context,
+                () async {
+                  final updatedData = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AccountSettingsScreen(
+                        name: vendorProfile['name'] ?? "",
+                        email: vendorProfile['email'] ?? "",
+                        profilePicture: vendorProfile['avatar_url'] ?? "",
+                      ),
+                    ),
+                  );
+                  if (updatedData != null) {
+                    _updateProfile(updatedData['name'], updatedData['email'],
+                        updatedData['profilePicture']);
+                  }
+                },
+              ),
+              _buildDivider(),
+              _buildSettingOption(
+                'Notifications',
+                Icons.notifications_outlined,
+                context,
+                () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => NotificationsScreen())),
+              ),
+              _buildDivider(),
+              _buildSettingOption(
+                'Payment Methods',
+                Icons.credit_card_outlined,
+                context,
+                () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => PaymentMethodsScreen())),
+              ),
+              _buildDivider(),
+              _buildSettingOption(
+                'Help & Support',
+                Icons.help_outline,
+                context,
+                () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => HelpSupportScreen())),
+              ),
+              _buildDivider(),
+              _buildSettingOption(
+                'Privacy & Terms',
+                Icons.privacy_tip_outlined,
+                context,
+                () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => PrivacyTermsScreen())),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

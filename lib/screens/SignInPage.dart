@@ -1,13 +1,16 @@
+import 'dart:convert';
 import 'package:eventhorizon/screens/user_dashboard.dart';
 import 'package:eventhorizon/screens/vendor_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SignInPage extends StatefulWidget {
-  final bool isUser ; // To differentiate User or Vendor
+  final bool isUser; // To differentiate User or Vendor
 
-  const SignInPage({super.key, required this.isUser });
+  const SignInPage({super.key, required this.isUser});
 
   @override
   _SignInPageState createState() => _SignInPageState();
@@ -15,6 +18,8 @@ class SignInPage extends StatefulWidget {
 
 class _SignInPageState extends State<SignInPage> {
   bool isSignIn = true;
+  bool _isLoading = false;
+  String? _errorMessage;
 
   // Controllers for the text fields
   final TextEditingController _emailController = TextEditingController();
@@ -33,6 +38,130 @@ class _SignInPageState extends State<SignInPage> {
     _fullNameController.dispose();
     _phoneController.dispose();
     super.dispose();
+  }
+
+  // API URL - Replace with your actual API URL
+  final String baseUrl = 'http://127.0.0.1:3000/api';
+
+  // Sign In API Call
+  Future<void> _signIn() async {
+    if (!_signInFormKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': _emailController.text.trim(),
+          'password': _passwordController.text,
+          'role': widget.isUser ? 'user' : 'vendor'
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        // Save auth token to shared preferences
+        final prefs = await SharedPreferences.getInstance();
+        prefs.setString('token', responseData['token']);
+        
+        // Check if refreshToken is in cookies and save it if needed
+        if (response.headers.containsKey('set-cookie')) {
+          final cookies = response.headers['set-cookie'];
+          if (cookies != null && cookies.contains('refreshToken=')) {
+            final refreshToken = cookies.split('refreshToken=')[1].split(';')[0];
+            prefs.setString('refreshToken', refreshToken);
+          }
+        }
+        
+        // Save user data if available
+        if (responseData.containsKey('user')) {
+          prefs.setString('userData', jsonEncode(responseData['user']));
+        }
+
+        // Navigate to appropriate dashboard
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => widget.isUser ? const UserDashboard() : const VendorDashboard(),
+          ),
+        );
+      } else {
+        // Handle error
+        setState(() {
+          _errorMessage = responseData['msg'] ?? 'Login failed. Please check your credentials.';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Network error: ${e.toString()}';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  // Sign Up API Call
+  Future<void> _signUp() async {
+    if (!_signUpFormKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': _fullNameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'password': _passwordController.text,
+          'phone': _phoneController.text.trim(),
+          'role': widget.isUser ? 'user' : 'vendor'
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+      
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        // Registration successful
+        if (!mounted) return;
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registration successful! Please sign in.')),
+        );
+        
+        // Switch to sign in tab
+        setState(() => isSignIn = true);
+      } else {
+        // Handle error
+        setState(() {
+          if (responseData['errors'] != null && responseData['errors'] is List) {
+            _errorMessage = responseData['errors'][0]['msg'] ?? 'Registration failed';
+          } else {
+            _errorMessage = responseData['msg'] ?? 'Registration failed';
+          }
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Network error: ${e.toString()}';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -97,6 +226,27 @@ class _SignInPageState extends State<SignInPage> {
                 ),
                 const SizedBox(height: 25),
 
+                // Error message if any
+                if (_errorMessage != null)
+                  Container(
+                    width: 350,
+                    padding: const EdgeInsets.all(10),
+                    margin: const EdgeInsets.only(bottom: 15),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade300),
+                    ),
+                    child: Text(
+                      _errorMessage!,
+                      style: GoogleFonts.poppins(
+                        color: Colors.red.shade800,
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+
                 // Animated Form
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
@@ -129,7 +279,7 @@ class _SignInPageState extends State<SignInPage> {
         key: _signInFormKey,
         child: Column(
           children: [
-            textField('Email or Phone', Icons.email, controller: _emailController),
+            textField('Email', Icons.email, controller: _emailController),
             const SizedBox(height: 16),
             textField('Password', Icons.lock, obscureText: true, controller: _passwordController),
             Align(
@@ -139,17 +289,9 @@ class _SignInPageState extends State<SignInPage> {
                 child: const Text('Forgot Password?', style: TextStyle(color: Colors.deepPurple)),
               ),
             ),
-            actionButton('Sign In', () {
-              if (_signInFormKey.currentState!.validate()) {
-                // Perform sign-in logic here
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => widget.isUser  ? UserDashboard() : VendorDashboard(),
-                  ),
-                );
-              }
-            }),
+            _isLoading
+                ? const CircularProgressIndicator(color: Colors.deepPurple)
+                : actionButton('Sign In', _signIn),
           ],
         ),
       ),
@@ -167,21 +309,13 @@ class _SignInPageState extends State<SignInPage> {
             const SizedBox(height: 16),
             textField('Email', Icons.email, controller: _emailController),
             const SizedBox(height: 16),
-            textField('Phone Number', Icons.phone, controller: _phoneController),
+            textField('Phone Number', Icons.phone, controller: _phoneController, isPhone: true),
             const SizedBox(height: 16),
-            textField('Password', Icons.lock, obscureText: true, controller: _passwordController),
-            const SizedBox(height: 20), // Added gap between Password and Sign Up button
-            actionButton('Sign Up', () {
-              if (_signUpFormKey.currentState!.validate()) {
-                // Perform sign-up logic here
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => widget.isUser  ? UserDashboard() : VendorDashboard(),
-                  ),
-                );
-              }
-            }),
+            textField('Password', Icons.lock, obscureText: true, controller: _passwordController, isPassword: true),
+            const SizedBox(height: 20),
+            _isLoading
+                ? const CircularProgressIndicator(color: Colors.deepPurple)
+                : actionButton('Sign Up', _signUp),
           ],
         ),
       ),
@@ -189,7 +323,12 @@ class _SignInPageState extends State<SignInPage> {
   }
 
   // Custom Input Field
-  Widget textField(String label, IconData icon, {bool obscureText = false, TextEditingController? controller}) {
+  Widget textField(String label, IconData icon, {
+    bool obscureText = false, 
+    TextEditingController? controller,
+    bool isPassword = false,
+    bool isPhone = false,
+  }) {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
@@ -199,26 +338,43 @@ class _SignInPageState extends State<SignInPage> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         filled: true,
         fillColor: Colors.grey[100],
+        helperText: isPassword 
+            ? 'Min 10 chars with uppercase, lowercase, number, and special char'
+            : null,
+        helperMaxLines: 2,
       ),
       validator: (value) {
         if (value == null || value.isEmpty) {
           return 'Please enter your $label';
         }
-        if (label == 'Email' || label == 'Email or Phone') {
+        
+        if (label == 'Email') {
           final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
           if (!emailRegex.hasMatch(value)) {
             return 'Please enter a valid email address';
           }
         }
-        if (label == 'Phone Number') {
-          final phoneRegex = RegExp(r'^\+?[0-9]{10,15}$');
+        
+        if (isPhone) {
+          // Exactly 10 digits as required by backend
+          final phoneRegex = RegExp(r'^\d{10}$');
           if (!phoneRegex.hasMatch(value)) {
-            return 'Please enter a valid phone number';
+            return 'Phone number must be exactly 10 digits';
           }
         }
-        if (label == 'Password' && value.length < 6) {
-          return 'Password must be at least 6 characters long';
+        
+        if (isPassword) {
+          // Match backend password requirements
+          if (value.length < 10) {
+            return 'Password must be at least 10 characters long';
+          }
+          
+          final passwordRegex = RegExp(r'^(?=.[a-z])(?=.[A-Z])(?=.\d)(?=.[\W_])(?!.*\s).{10,}$');
+          if (!passwordRegex.hasMatch(value)) {
+            return 'Password must include uppercase, lowercase, number, and special character';
+          }
         }
+        
         return null;
       },
     );
