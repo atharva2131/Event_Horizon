@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'User_CreateEventScreen.dart';
 import 'package:eventhorizon/widgets/user_bottom_nav_screen.dart';
 import 'EventDetailScreen.dart';
@@ -21,27 +22,81 @@ class _HomeScreenState extends State<HomeScreen> {
   final Color primaryLightColor = Colors.deepPurple[100]!;
   
   List<Map<String, dynamic>> events = [];
+  Map<String, dynamic> userProfile = {};
+  bool isLoading = true;
+  String? errorMessage;
 
   @override
   void initState() {
     super.initState();
+    _loadUserProfile();
     _loadEvents();
   }
 
-  Future<void> _loadEvents() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? eventsJson = prefs.getString('events');
-    if (eventsJson != null) {
+  Future<void> _loadUserProfile() async {
+    setState(() => isLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      
+      if (token == null) {
+        setState(() {
+          errorMessage = 'Authentication token not found. Please login again.';
+          isLoading = false;
+        });
+        return;
+      }
+      
+      final response = await http.get(
+        Uri.parse('http://127.0.0.1:3000/api/auth/me'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        setState(() {
+          userProfile = responseData['user'] ?? {};
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          errorMessage = 'Failed to load profile: ${response.statusCode}';
+          isLoading = false;
+        });
+      }
+    } catch (e) {
       setState(() {
-        events = List<Map<String, dynamic>>.from(json.decode(eventsJson));
+        errorMessage = 'Error loading profile: $e';
+        isLoading = false;
       });
     }
   }
 
+  Future<void> _loadEvents() async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? eventsJson = prefs.getString('events');
+      if (eventsJson != null) {
+        setState(() {
+          events = List<Map<String, dynamic>>.from(json.decode(eventsJson));
+        });
+      }
+    } catch (e) {
+      print('Error loading events: $e');
+    }
+  }
+
   Future<void> _saveEvents() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String eventsJson = json.encode(events);
-    prefs.setString('events', eventsJson);
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String eventsJson = json.encode(events);
+      prefs.setString('events', eventsJson);
+    } catch (e) {
+      print('Error saving events: $e');
+    }
   }
 
   Future<void> _navigateToCreateEventScreen(BuildContext context) async {
@@ -67,29 +122,54 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         toolbarHeight: 0, // Hide the app bar but keep the status bar color
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildCreateEventSection(),
-                  const SizedBox(height: 24),
-                  _buildEventsAndBudget(context),
-                  const SizedBox(height: 24),
-                  _buildCreatedEvents(),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+      body: isLoading 
+          ? const Center(child: CircularProgressIndicator())
+          : errorMessage != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
+                        const SizedBox(height: 16),
+                        Text(
+                          errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.red[700]),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _loadUserProfile,
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(),
+                      const SizedBox(height: 24),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildCreateEventSection(),
+                            const SizedBox(height: 24),
+                            _buildEventsAndBudget(context),
+                            const SizedBox(height: 24),
+                            _buildCreatedEvents(),
+                            const SizedBox(height: 24),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _navigateToCreateEventScreen(context),
         backgroundColor: primaryColor,
@@ -118,9 +198,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   border: Border.all(color: Colors.white, width: 2),
                   borderRadius: BorderRadius.circular(25),
                 ),
-                child: const CircleAvatar(
+                child: CircleAvatar(
                   backgroundImage: NetworkImage(
-                    "https://storage.googleapis.com/a1aa/image/v9DaEqSqy7puzZasD8e_nSyNJ8ok4ejZgyDLaXZHhOQ.jpg",
+                    userProfile['avatar_url'] ?? "https://via.placeholder.com/150",
                   ),
                   radius: 25,
                 ),
@@ -128,17 +208,17 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
-                    "Welcome back, Sarah!",
-                    style: TextStyle(
+                    "Welcome back, ${userProfile['name']?.split(' ')[0] ?? 'User'}!",
+                    style: const TextStyle(
                       fontSize: 18, 
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
-                  SizedBox(height: 4),
-                  Text(
+                  const SizedBox(height: 4),
+                  const Text(
                     "Let's plan your next event",
                     style: TextStyle(color: Colors.white70),
                   ),
@@ -287,13 +367,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildEventsAndBudget(BuildContext context) {
+    // Get event counts from user profile or default to 0
+    final upcomingEvents = userProfile['upcoming_events_count'] ?? 0;
+    final budgetUsed = userProfile['budget_used'] ?? 0;
+    final totalBudget = userProfile['total_budget'] ?? 0;
+    
     return Row(
       children: [
         Expanded(
           child: _infoCard(
             Icons.calendar_today,
             "My Events",
-            "2 upcoming events",
+            "$upcomingEvents upcoming events",
             primaryColor,
           ),
         ),
@@ -309,7 +394,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: _infoCard(
               Icons.attach_money,
               "Budget",
-              "\$5,000 / \$8,000",
+              "\$$budgetUsed / \$$totalBudget",
               Colors.green,
             ),
           ),

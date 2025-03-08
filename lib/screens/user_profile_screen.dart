@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'User_AccountSettingsScreen.dart';
 import 'package:eventhorizon/screens/User_notifications_screen.dart';
 import 'package:eventhorizon/screens/User_payment_methods_screen.dart';
@@ -10,29 +13,213 @@ class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({Key? key}) : super(key: key);
 
   @override
-  _UserProfileScreenState createState() => _UserProfileScreenState();
+  State<UserProfileScreen> createState() => _UserProfileScreenState();
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  String name = 'John Doe';
-  String email = 'john@example.com';
-  String profilePicture = 'https://via.placeholder.com/150';
-
   // Deep purple color palette
   final Color primaryPurple = const Color(0xFF4A148C); // Deep Purple 900
   final Color lightPurple = const Color(0xFF7C43BD); // Lighter purple
   final Color accentPurple = const Color(0xFF9C27B0); // Purple 500
   final Color backgroundPurple = const Color(0xFFF5F0FF); // Very light purple
 
-  void _updateProfile(String updatedName, String updatedEmail, String updatedPhoto) {
-    setState(() {
-      name = updatedName;
-      email = updatedEmail;
-      profilePicture = updatedPhoto;
-    });
+  Map<String, dynamic> userProfile = {};
+  bool isLoading = true;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
   }
 
-  void _logout(BuildContext context) {
+  Future<void> _loadUserProfile() async {
+    setState(() => isLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      
+      if (token == null) {
+        setState(() {
+          errorMessage = 'Authentication token not found. Please login again.';
+          isLoading = false;
+        });
+        return;
+      }
+      
+      final response = await http.get(
+        Uri.parse('http://127.0.0.1:3000/api/auth/me'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        setState(() {
+          userProfile = responseData['user'] ?? {};
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          errorMessage = 'Failed to load profile: ${response.statusCode}';
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error loading profile: $e';
+        isLoading = false;
+      });
+    }
+  }
+
+  void _updateProfile(String updatedName, String updatedEmail, String updatedPhoto) async {
+    setState(() => isLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      
+      if (token == null) {
+        setState(() {
+          errorMessage = 'Authentication token not found. Please login again.';
+          isLoading = false;
+        });
+        return;
+      }
+      
+      final response = await http.put(
+        Uri.parse('http://127.0.0.1:3000/api/auth/update-profile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'name': updatedName,
+          'email': updatedEmail,
+          'avatar_url': updatedPhoto,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        setState(() {
+          userProfile = responseData['user'] ?? {};
+          isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully')),
+        );
+      } else {
+        setState(() {
+          errorMessage = 'Failed to update profile: ${response.statusCode}';
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error updating profile: $e';
+        isLoading = false;
+      });
+    }
+  }
+
+  void _logout(BuildContext context) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('token');
+      await prefs.remove('userData');
+      
+      // Navigate to login screen
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error logging out: $e')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: isLoading 
+          ? Center(child: CircularProgressIndicator(color: primaryPurple))
+          : errorMessage != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
+                        const SizedBox(height: 16),
+                        Text(
+                          errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.red[700]),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _loadUserProfile,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryPurple,
+                          ),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : CustomScrollView(
+                  slivers: [
+                    SliverAppBar(
+                      expandedHeight: 200.0,
+                      floating: false,
+                      pinned: true,
+                      flexibleSpace: FlexibleSpaceBar(
+                        title: Text(
+                          'Profile',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        background: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topRight,
+                              end: Alignment.bottomLeft,
+                              colors: [primaryPurple, accentPurple],
+                            ),
+                          ),
+                        ),
+                      ),
+                      actions: [
+                        IconButton(
+                          icon: const Icon(Icons.logout, color: Colors.white),
+                          onPressed: () => _showLogoutDialog(context),
+                        ),
+                      ],
+                    ),
+                    SliverToBoxAdapter(
+                      child: Column(
+                        children: [
+                          _buildProfileHeader(),
+                          _buildStatisticsSection(),
+                          _buildFriendsSection(),
+                          _buildSettingsSection(),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -46,70 +233,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey)),
             ),
             ElevatedButton(
-  onPressed: () => _logout(context),
-  style: ElevatedButton.styleFrom(
-    backgroundColor: primaryPurple, // FIXED: Replaced `primary` with `backgroundColor`
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-  ),
-  child: Text(
-    'Logout',
-    style: GoogleFonts.poppins(color: Colors.white),
-  ),
-),
-
+              onPressed: () {
+                Navigator.pop(context);
+                _logout(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryPurple,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+              ),
+              child: Text(
+                'Logout',
+                style: GoogleFonts.poppins(color: Colors.white),
+              ),
+            ),
           ],
         );
       },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 200.0,
-            floating: false,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              title: Text(
-                'Profile',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
-                    colors: [primaryPurple, accentPurple],
-                  ),
-                ),
-              ),
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.logout, color: Colors.white),
-                onPressed: () => _logout(context),
-              ),
-            ],
-          ),
-          SliverToBoxAdapter(
-            child: Column(
-              children: [
-                _buildProfileHeader(),
-                _buildStatisticsSection(),
-                _buildFriendsSection(),
-                _buildSettingsSection(),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -120,12 +260,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         children: [
           CircleAvatar(
             radius: 60,
-            backgroundImage: NetworkImage(profilePicture),
+            backgroundImage: NetworkImage(userProfile['avatar_url'] ?? "https://via.placeholder.com/150"),
             backgroundColor: lightPurple,
           ),
           const SizedBox(height: 16),
           Text(
-            name,
+            userProfile['name'] ?? 'User Name',
             style: GoogleFonts.poppins(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -133,7 +273,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ),
           ),
           Text(
-            email,
+            userProfile['email'] ?? 'user@example.com',
             style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey),
           ),
           const SizedBox(height: 10),
@@ -143,7 +283,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               const Icon(Icons.star, color: Colors.amber),
               const SizedBox(width: 5),
               Text(
-                '4.9 (120 reviews)',
+                '${userProfile['rating'] ?? '0'} (${userProfile['reviews_count'] ?? '0'} reviews)',
                 style: GoogleFonts.poppins(fontSize: 16),
               ),
             ],
@@ -151,18 +291,22 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () async {
-              final updatedData = await Navigator.push(
+              final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => AccountSettingsScreen(
-                    name: name,
-                    email: email,
-                    profilePicture: profilePicture,
+                    name: userProfile['name'] ?? '',
+                    email: userProfile['email'] ?? '',
+                    profilePicture: userProfile['avatar_url'] ?? '',
                   ),
                 ),
               );
-              if (updatedData != null) {
-                _updateProfile(updatedData['name'], updatedData['email'], updatedData['profilePicture']);
+              if (result != null) {
+                _updateProfile(
+                  result['name'], 
+                  result['email'], 
+                  result['profilePicture']
+                );
               }
             },
             style: ElevatedButton.styleFrom(
@@ -187,15 +331,22 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildStatistic('25', 'Completed Events'),
-          _buildStatistic('12', 'Upcoming Events'),
-          _buildStatistic('4.9', 'User Rating'),
+          _buildStatistic(userProfile['completed_events']?.toString() ?? '0', 'Completed Events'),
+          _buildStatistic(userProfile['upcoming_events']?.toString() ?? '0', 'Upcoming Events'),
+          _buildStatistic(userProfile['rating']?.toString() ?? '0', 'User Rating'),
         ],
       ),
     );
   }
 
   Widget _buildFriendsSection() {
+    // This would ideally be fetched from the backend
+    List<Map<String, String>> friends = [
+      {'name': 'Alice Brown', 'role': 'Event Planner', 'image': 'https://via.placeholder.com/150'},
+      {'name': 'Mark Wilson', 'role': 'Photographer', 'image': 'https://via.placeholder.com/150'},
+      {'name': 'Emma Johnson', 'role': 'Musician', 'image': 'https://via.placeholder.com/150'},
+    ];
+
     return Container(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -213,11 +364,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: [
-                _buildFriend('Alice Brown', 'Event Planner', 'https://via.placeholder.com/150'),
-                _buildFriend('Mark Wilson', 'Photographer', 'https://via.placeholder.com/150'),
-                _buildFriend('Emma Johnson', 'Musician', 'https://via.placeholder.com/150'),
-              ],
+              children: friends.map((friend) => 
+                _buildFriend(friend['name']!, friend['role']!, friend['image']!)
+              ).toList(),
             ),
           ),
           Align(

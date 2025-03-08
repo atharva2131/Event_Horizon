@@ -3,6 +3,9 @@ import 'package:eventhorizon/widgets/vendor_bottom_nav_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:eventhorizon/screens/vendor_bookings_screen.dart' as vendorBookings;
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class VendorHomeScreen extends StatefulWidget {
   const VendorHomeScreen({super.key});
@@ -16,11 +19,10 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
   final Color primaryColor = Colors.deepPurple;
   final Color primaryLightColor = Colors.deepPurple[100]!;
   
-  List<Map<String, dynamic>> services = [
-    {"title": "Wedding Photography", "price": "\$299/hr", "isActive": true},
-    {"title": "Corporate Events", "price": "\$199/hr", "isActive": true},
-    {"title": "Portrait Sessions", "price": "\$149/hr", "isActive": false},
-  ];
+  List<Map<String, dynamic>> services = [];
+  Map<String, dynamic> vendorProfile = {};
+  bool isLoading = true;
+  String? errorMessage;
 
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
@@ -31,14 +33,196 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
 
   bool _isEditing = false;
 
-  void _toggleServiceStatus(int index) {
-    setState(() {
-      services[index]["isActive"] = !services[index]["isActive"];
-    });
+  @override
+  void initState() {
+    super.initState();
+    _loadVendorProfile();
+    _loadServices();
   }
 
-  void _addNewService() {
-    if (_titleController.text.isNotEmpty && _priceController.text.isNotEmpty) {
+  Future<void> _loadVendorProfile() async {
+    setState(() => isLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      
+      if (token == null) {
+        setState(() {
+          errorMessage = 'Authentication token not found. Please login again.';
+          isLoading = false;
+        });
+        return;
+      }
+      
+      final response = await http.get(
+        Uri.parse('http://127.0.0.1:3000/api/auth/me'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        setState(() {
+          vendorProfile = responseData['user'] ?? {};
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          errorMessage = 'Failed to load profile: ${response.statusCode}';
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error loading profile: $e';
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadServices() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      
+      if (token == null) {
+        return;
+      }
+      
+      final response = await http.get(
+        Uri.parse('http://127.0.0.1:3000/api/vendor/services'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        setState(() {
+          services = List<Map<String, dynamic>>.from(responseData['services'] ?? []);
+        });
+      } else {
+        // If API fails, use mock data
+        setState(() {
+          services = [
+            {"title": "Wedding Photography", "price": "\$299/hr", "isActive": true},
+            {"title": "Corporate Events", "price": "\$199/hr", "isActive": true},
+            {"title": "Portrait Sessions", "price": "\$149/hr", "isActive": false},
+          ];
+        });
+      }
+    } catch (e) {
+      print('Error loading services: $e');
+      // Use mock data on error
+      setState(() {
+        services = [
+          {"title": "Wedding Photography", "price": "\$299/hr", "isActive": true},
+          {"title": "Corporate Events", "price": "\$199/hr", "isActive": true},
+          {"title": "Portrait Sessions", "price": "\$149/hr", "isActive": false},
+        ];
+      });
+    }
+  }
+
+  void _toggleServiceStatus(int index) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      
+      if (token == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Authentication token not found. Please login again.')),
+        );
+        return;
+      }
+      
+      final serviceId = services[index]['id'];
+      final newStatus = !services[index]["isActive"];
+      
+      final response = await http.put(
+        Uri.parse('http://127.0.0.1:3000/api/vendor/services/$serviceId/status'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'isActive': newStatus,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          services[index]["isActive"] = newStatus;
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update service status')),
+        );
+      }
+    } catch (e) {
+      print('Error toggling service status: $e');
+      // Update UI optimistically
+      setState(() {
+        services[index]["isActive"] = !services[index]["isActive"];
+      });
+    }
+  }
+
+  void _addNewService() async {
+    if (_titleController.text.isEmpty || _priceController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter both title and price")),
+      );
+      return;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      
+      if (token == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Authentication token not found. Please login again.')),
+        );
+        return;
+      }
+      
+      final response = await http.post(
+        Uri.parse('http://127.0.0.1:3000/api/vendor/services'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'title': _titleController.text,
+          'price': _priceController.text,
+          'isActive': false,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        final responseData = json.decode(response.body);
+        setState(() {
+          services.add(responseData['service'] ?? {
+            "title": _titleController.text,
+            "price": _priceController.text,
+            "isActive": false,
+          });
+        });
+        _titleController.clear();
+        _priceController.clear();
+        Navigator.pop(context); // Close the modal
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to add service")),
+        );
+      }
+    } catch (e) {
+      print('Error adding service: $e');
+      // Add service optimistically
       setState(() {
         services.add({
           "title": _titleController.text,
@@ -49,10 +233,6 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
       _titleController.clear();
       _priceController.clear();
       Navigator.pop(context); // Close the modal
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter both title and price")),
-      );
     }
   }
 
@@ -85,9 +265,10 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
               const SizedBox(height: 16),
               TextField(
                 controller: _priceController,
-                keyboardType: TextInputType.number,
+                keyboardType: TextInputType.text,
                 decoration: InputDecoration(
                   labelText: "Service Price",
+                  hintText: "e.g. 199/hr",
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   filled: true,
                   fillColor: Colors.grey[50],
@@ -168,12 +349,52 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
               child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  services[index]["title"] = _titleController.text;
-                  services[index]["price"] = _priceController.text;
-                });
-                Navigator.pop(context);
+              onPressed: () async {
+                try {
+                  final prefs = await SharedPreferences.getInstance();
+                  final token = prefs.getString('token');
+                  
+                  if (token == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Authentication token not found. Please login again.')),
+                    );
+                    return;
+                  }
+                  
+                  final serviceId = services[index]['id'];
+                  
+                  final response = await http.put(
+                    Uri.parse('http://127.0.0.1:3000/api/vendor/services/$serviceId'),
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': 'Bearer $token',
+                    },
+                    body: jsonEncode({
+                      'title': _titleController.text,
+                      'price': _priceController.text,
+                    }),
+                  );
+
+                  if (response.statusCode == 200) {
+                    setState(() {
+                      services[index]["title"] = _titleController.text;
+                      services[index]["price"] = _priceController.text;
+                    });
+                    Navigator.pop(context);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Failed to update service")),
+                    );
+                  }
+                } catch (e) {
+                  print('Error updating service: $e');
+                  // Update optimistically
+                  setState(() {
+                    services[index]["title"] = _titleController.text;
+                    services[index]["price"] = _priceController.text;
+                  });
+                  Navigator.pop(context);
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
@@ -192,9 +413,33 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
   Future<void> _pickImage() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
-      setState(() {
-        portfolioImages.add(image.path); // Add selected image to portfolio
-      });
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString('token');
+        
+        if (token == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Authentication token not found. Please login again.')),
+          );
+          return;
+        }
+        
+        // Here you would typically upload the image to your server
+        // For now, we'll just add it to the local list
+        setState(() {
+          portfolioImages.add(image.path);
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Image added to portfolio')),
+        );
+      } catch (e) {
+        print('Error adding image to portfolio: $e');
+        // Add image optimistically
+        setState(() {
+          portfolioImages.add(image.path);
+        });
+      }
     }
   }
 
@@ -217,23 +462,51 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildProfileCard(),
-            const SizedBox(height: 20),
-            _buildStatsGrid(context),
-            const SizedBox(height: 20),
-            _buildServicesSection(),
-            const SizedBox(height: 20),
-            _buildPortfolioSection(),
-            const SizedBox(height: 20),
-            _buildContactInfo(),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+      body: isLoading 
+          ? Center(child: CircularProgressIndicator(color: primaryColor))
+          : errorMessage != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
+                        const SizedBox(height: 16),
+                        Text(
+                          errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.red[700]),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _loadVendorProfile,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                          ),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      _buildProfileCard(),
+                      const SizedBox(height: 20),
+                      _buildStatsGrid(context),
+                      const SizedBox(height: 20),
+                      _buildServicesSection(),
+                      const SizedBox(height: 20),
+                      _buildPortfolioSection(),
+                      const SizedBox(height: 20),
+                      _buildContactInfo(),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddServiceModal,
         backgroundColor: primaryColor,
@@ -267,10 +540,10 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                     border: Border.all(color: Colors.white, width: 3),
                     borderRadius: BorderRadius.circular(40),
                   ),
-                  child: const CircleAvatar(
+                  child: CircleAvatar(
                     radius: 40,
                     backgroundImage: NetworkImage(
-                      "https://storage.googleapis.com/a1aa/image/Pb6FWzcRzBLYGzQ40URCBIxsSIr4ZsbQaHF0_hv9KDw.jpg",
+                      vendorProfile['avatar_url'] ?? "https://via.placeholder.com/150",
                     ),
                   ),
                 ),
@@ -279,9 +552,9 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        "Studio Creative",
-                        style: TextStyle(
+                      Text(
+                        vendorProfile['name'] ?? "Vendor Name",
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 22,
                           color: Colors.white,
@@ -290,17 +563,19 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                       const SizedBox(height: 4),
                       Row(
                         children: List.generate(5, (index) {
+                          final rating = vendorProfile['rating'] ?? 0;
                           return Icon(
-                            index < 4 ? Icons.star : Icons.star_half,
+                            index < rating.floor() ? Icons.star : 
+                            (index == rating.floor() && rating % 1 > 0) ? Icons.star_half : Icons.star_border,
                             color: Colors.amber,
                             size: 20,
                           );
                         }),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        "Professional Photography",
-                        style: TextStyle(color: Colors.white70, fontSize: 16),
+                      Text(
+                        vendorProfile['business_type'] ?? "Professional Service",
+                        style: const TextStyle(color: Colors.white70, fontSize: 16),
                       ),
                     ],
                   ),
@@ -311,9 +586,9 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                     color: Colors.green,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
-                    "Active",
-                    style: TextStyle(
+                  child: Text(
+                    vendorProfile['status'] ?? "Active",
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
@@ -329,12 +604,12 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                 color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _ProfileStat(label: "Bookings", value: "24"),
-                  _ProfileStat(label: "Reviews", value: "4.8"),
-                  _ProfileStat(label: "Completed", value: "18"),
+                  _ProfileStat(label: "Bookings", value: vendorProfile['bookings_count']?.toString() ?? "0"),
+                  _ProfileStat(label: "Reviews", value: vendorProfile['rating']?.toString() ?? "0"),
+                  _ProfileStat(label: "Completed", value: vendorProfile['completed_events']?.toString() ?? "0"),
                 ],
               ),
             ),
@@ -351,7 +626,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
         _buildStatCard(
           Icons.calendar_today,
           "New Bookings",
-          "3",
+          vendorProfile['new_bookings']?.toString() ?? "0",
           Colors.orange[400]!,
           onTap: () {
             Navigator.push(
@@ -363,13 +638,13 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
         _buildStatCard(
           Icons.star,
           "Pending Reviews",
-          "2",
+          vendorProfile['pending_reviews']?.toString() ?? "0",
           primaryColor,
         ),
         _buildStatCard(
           Icons.attach_money,
           "Total Revenue",
-          "\$2,450",
+          "\$${vendorProfile['total_revenue']?.toString() ?? "0"}",
           Colors.green[400]!,
         ),
       ],
@@ -507,10 +782,44 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
               ),
               IconButton(
                 icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () {
-                  setState(() {
-                    services.removeAt(index);
-                  });
+                onPressed: () async {
+                  try {
+                    final prefs = await SharedPreferences.getInstance();
+                    final token = prefs.getString('token');
+                    
+                    if (token == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Authentication token not found. Please login again.')),
+                      );
+                      return;
+                    }
+                    
+                    final serviceId = services[index]['id'];
+                    
+                    final response = await http.delete(
+                      Uri.parse('http://127.0.0.1:3000/api/vendor/services/$serviceId'),
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer $token',
+                      },
+                    );
+
+                    if (response.statusCode == 200) {
+                      setState(() {
+                        services.removeAt(index);
+                      });
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Failed to delete service")),
+                      );
+                    }
+                  } catch (e) {
+                    print('Error deleting service: $e');
+                    // Delete optimistically
+                    setState(() {
+                      services.removeAt(index);
+                    });
+                  }
                 },
               ),
             ],
@@ -639,11 +948,11 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
         children: [
           _buildSectionHeader("Contact Information", ""),
           const SizedBox(height: 16),
-          _buildContactItem(Icons.email, "contact@studiocreative.com"),
+          _buildContactItem(Icons.email, vendorProfile['email'] ?? "contact@example.com"),
           const SizedBox(height: 12),
-          _buildContactItem(Icons.phone, "+1 (555) 123-4567"),
+          _buildContactItem(Icons.phone, vendorProfile['phone'] ?? "+1 (555) 123-4567"),
           const SizedBox(height: 12),
-          _buildContactItem(Icons.location_on, "123 Studio Lane, City, Country"),
+          _buildContactItem(Icons.location_on, vendorProfile['address'] ?? "123 Business Lane, City, Country"),
         ],
       ),
     );
@@ -661,9 +970,13 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
           child: Icon(icon, color: primaryColor),
         ),
         const SizedBox(width: 16),
-        Text(
-          text,
-          style: const TextStyle(fontSize: 16),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 16),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
+          ),
         ),
       ],
     );
