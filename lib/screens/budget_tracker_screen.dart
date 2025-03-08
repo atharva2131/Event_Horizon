@@ -225,7 +225,7 @@ class _BudgetTrackerScreenState extends State<BudgetTrackerScreen> with SingleTi
     final spentPercentage = spentAmount / totalBudget;
     
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      
       appBar: AppBar(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
@@ -245,15 +245,17 @@ class _BudgetTrackerScreenState extends State<BudgetTrackerScreen> with SingleTi
             onPressed: () {},
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          indicatorWeight: 3,
-          tabs: const [
-            Tab(text: 'Overview'),
-            Tab(text: 'Categories'),
-            Tab(text: 'History'),
-          ],
+       bottom: TabBar(
+  controller: _tabController,
+  indicatorColor: Colors.white,
+  indicatorWeight: 3,
+  labelColor: const Color.fromARGB(255, 246, 247, 248),   // Selected tab text color
+  unselectedLabelColor: Colors.grey, // Unselected tab text color
+  tabs: const [
+    Tab(text: 'Overview'),
+    Tab(text: 'Categories'),
+    Tab(text: 'History'),
+  ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
