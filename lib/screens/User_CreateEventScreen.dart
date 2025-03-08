@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:contacts_service/contacts_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 
 class CreateEventScreen extends StatefulWidget {
@@ -18,15 +20,58 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   final _budgetController = TextEditingController();
   final _dateController = TextEditingController();
   final _timeController = TextEditingController();
+  final _guestController = TextEditingController();
+  final _newGuestNameController = TextEditingController();
+  final _newGuestEmailController = TextEditingController();
+  final _newGuestPhoneController = TextEditingController();
   String? _selectedEventType;
   final List<String> _eventTypes = ["Wedding", "Birthday", "Conference"];
+  final List<Map<String, dynamic>> _guestList = [];
+  List<Contact> _contacts = [];
+  bool _isLoadingContacts = false;
 
-  // Define theme colors
   static const Color primaryColor = Colors.deepPurple;
-  static const Color lightPurple = Color(0xFFD1C4E9); // Deep Purple 100
+  static const Color lightPurple = Color(0xFFD1C4E9);
   static const Color backgroundColor = Colors.white;
   static const Color textOnPurple = Colors.white;
-  static const Color textOnWhite = Color(0xFF311B92); // Deep Purple 900
+  static const Color textOnWhite = Color(0xFF311B92);
+
+  @override
+  void initState() {
+    super.initState();
+    _requestContactPermission();
+  }
+
+  Future<void> _requestContactPermission() async {
+    final status = await Permission.contacts.request();
+    if (status.isGranted) {
+      _loadContacts();
+    }
+  }
+
+  Future<void> _loadContacts() async {
+    setState(() {
+      _isLoadingContacts = true;
+    });
+    
+    try {
+      final contacts = await ContactsService.getContacts();
+      setState(() {
+        _contacts = contacts.toList();
+        _isLoadingContacts = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingContacts = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to load contacts: $e"),
+          backgroundColor: Colors.red.shade400,
+        ),
+      );
+    }
+  }
 
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
@@ -43,16 +88,6 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            primaryColor: primaryColor,
-            colorScheme: ColorScheme.light(primary: primaryColor),
-            buttonTheme: ButtonThemeData(textTheme: ButtonTextTheme.primary),
-          ),
-          child: child!,
-        );
-      },
     );
 
     if (picked != null) {
@@ -66,16 +101,6 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            primaryColor: primaryColor,
-            colorScheme: ColorScheme.light(primary: primaryColor),
-            buttonTheme: ButtonThemeData(textTheme: ButtonTextTheme.primary),
-          ),
-          child: child!,
-        );
-      },
     );
 
     if (picked != null) {
@@ -83,6 +108,215 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         _timeController.text = picked.format(context);
       });
     }
+  }
+
+  void _addGuest() {
+    if (_guestController.text.isNotEmpty) {
+      setState(() {
+        _guestList.add({
+          'name': _guestController.text,
+          'email': '',
+          'phone': '',
+          'status': 'Not Invited'
+        });
+        _guestController.clear();
+      });
+    }
+  }
+
+  void _showContactsBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              height: MediaQuery.of(context).size.height * 0.7,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Select Contacts",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: primaryColor,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          TextButton.icon(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _showAddNewGuestDialog();
+                            },
+                            icon: const Icon(Icons.person_add, color: primaryColor),
+                            label: const Text("New", style: TextStyle(color: primaryColor)),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: "Search contacts...",
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  _isLoadingContacts
+                      ? const Center(child: CircularProgressIndicator())
+                      : Expanded(
+                          child: ListView.builder(
+                            itemCount: _contacts.length,
+                            itemBuilder: (context, index) {
+                              final contact = _contacts[index];
+                              final name = contact.displayName ?? "No Name";
+                              final email = contact.emails?.isNotEmpty == true
+                                  ? contact.emails!.first.value ?? ""
+                                  : "";
+                              final phone = contact.phones?.isNotEmpty == true
+                                  ? contact.phones!.first.value ?? ""
+                                  : "";
+                              
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: primaryColor,
+                                  child: Text(
+                                    name.isNotEmpty ? name[0].toUpperCase() : "?",
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                                title: Text(name),
+                                subtitle: Text(email.isNotEmpty ? email : (phone.isNotEmpty ? phone : "No contact info")),
+                                onTap: () {
+                                  setState(() {
+                                    _guestList.add({
+                                      'name': name,
+                                      'email': email,
+                                      'phone': phone,
+                                      'status': 'Not Invited'
+                                    });
+                                  });
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text("$name added to guest list"),
+                                      backgroundColor: Colors.green.shade400,
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showAddNewGuestDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Add New Guest"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _newGuestNameController,
+                  decoration: const InputDecoration(
+                    labelText: "Name",
+                    prefixIcon: Icon(Icons.person),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _newGuestEmailController,
+                  decoration: const InputDecoration(
+                    labelText: "Email",
+                    prefixIcon: Icon(Icons.email),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _newGuestPhoneController,
+                  decoration: const InputDecoration(
+                    labelText: "Phone",
+                    prefixIcon: Icon(Icons.phone),
+                  ),
+                  keyboardType: TextInputType.phone,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (_newGuestNameController.text.isNotEmpty) {
+                  setState(() {
+                    _guestList.add({
+                      'name': _newGuestNameController.text,
+                      'email': _newGuestEmailController.text,
+                      'phone': _newGuestPhoneController.text,
+                      'status': 'Not Invited'
+                    });
+                  });
+                  _newGuestNameController.clear();
+                  _newGuestEmailController.clear();
+                  _newGuestPhoneController.clear();
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text("New guest added to list"),
+                      backgroundColor: Colors.green.shade400,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text("Guest name is required"),
+                      backgroundColor: Colors.red.shade400,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+              ),
+              child: const Text("Add"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _createEvent() {
@@ -110,6 +344,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       'description': _descriptionController.text,
       'budget': _budgetController.text,
       'image_url': _coverImage?.path ?? '',
+      'guests': _guestList,
     };
 
     Navigator.pop(context, newEvent);
@@ -173,6 +408,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                       controller: _budgetController,
                       keyboardType: TextInputType.number,
                       icon: FontAwesomeIcons.dollarSign),
+                  _buildGuestSection(),
                   const SizedBox(height: 24),
                   _buildCreateEventButton(),
                 ],
@@ -184,125 +420,136 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     );
   }
 
-  Widget _buildCoverPhotoUpload() {
-    return GestureDetector(
-      onTap: _pickImage,
-      child: Container(
-        height: 200,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: lightPurple,
-          image: _coverImage != null
-              ? DecorationImage(image: FileImage(_coverImage!), fit: BoxFit.cover)
-              : null,
-        ),
-        child: _coverImage == null
-            ? Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(FontAwesomeIcons.camera, color: primaryColor, size: 40),
-                  SizedBox(height: 12),
-                  Text("Add Event Cover Photo",
-                      style: TextStyle(color: primaryColor, fontSize: 16, fontWeight: FontWeight.bold)),
-                ],
-              )
-            : null,
-      ),
-    );
-  }
-
-  Widget _buildTextField(String label, String placeholder,
-      {int maxLines = 1,
-      TextInputType? keyboardType,
-      IconData? icon,
-      required TextEditingController controller}) {
+  Widget _buildGuestSection() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textOnWhite)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: controller,
-            keyboardType: keyboardType,
-            maxLines: maxLines,
-            decoration: InputDecoration(
-              hintText: placeholder,
-              prefixIcon: icon != null ? Icon(icon, color: primaryColor) : null,
-              filled: true,
-              fillColor: lightPurple.withOpacity(0.2),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: primaryColor, width: 2),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDropdown() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text("Event Type",
+          const Text("Guest List",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textOnWhite)),
           const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: lightPurple.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _selectedEventType,
-                isExpanded: true,
-                icon: const Icon(Icons.arrow_drop_down, color: primaryColor),
-                items: _eventTypes.map((String item) {
-                  return DropdownMenuItem(
-                    value: item,
-                    child: Text(item, style: const TextStyle(color: textOnWhite)),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedEventType = newValue;
-                  });
-                },
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _guestController,
+                  decoration: InputDecoration(
+                    hintText: "Enter guest email or name",
+                    prefixIcon: const Icon(FontAwesomeIcons.user, color: primaryColor),
+                    filled: true,
+                    fillColor: lightPurple.withOpacity(0.2),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: _addGuest,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:const Color.fromARGB(255, 236, 231, 245),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text("Add"),
+              ),
+            ],
           ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton.icon(
+                onPressed: _showContactsBottomSheet,
+                icon: const Icon(Icons.contacts),
+                label: const Text("Add from Contacts"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 236, 231, 245),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              ElevatedButton.icon(
+                onPressed: _showAddNewGuestDialog,
+                icon: const Icon(Icons.person_add),
+                label: const Text("New Contact"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:const Color.fromARGB(255, 236, 231, 245),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _guestList.isNotEmpty
+              ? Column(
+                  children: _guestList.map((guest) => _buildGuestListItem(guest)).toList(),
+                )
+              : const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Text(
+                      "No guests added yet",
+                      style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+                    ),
+                  ),
+                ),
         ],
       ),
     );
   }
 
-  Widget _buildDatePicker() {
-    return GestureDetector(
-      onTap: () => _selectDate(context),
-      child: AbsorbPointer(
-        child: _buildTextField("Date", "Select date",
-            controller: _dateController, icon: FontAwesomeIcons.calendarAlt),
+  Widget _buildGuestListItem(Map<String, dynamic> guest) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: lightPurple.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
       ),
-    );
-  }
-
-  Widget _buildTimePicker() {
-    return GestureDetector(
-      onTap: () => _selectTime(context),
-      child: AbsorbPointer(
-        child: _buildTextField("Time", "Select time",
-            controller: _timeController, icon: FontAwesomeIcons.clock),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: primaryColor,
+            radius: 20,
+            child: Text(
+              guest['name']!.isNotEmpty ? guest['name']![0].toUpperCase() : "?",
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  guest['name'] ?? "",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                if (guest['email']!.isNotEmpty)
+                  Text(
+                    guest['email'] ?? "",
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  ),
+                if (guest['phone']!.isNotEmpty)
+                  Text(
+                    guest['phone'] ?? "",
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.red, size: 20),
+            onPressed: () {
+              setState(() {
+                _guestList.remove(guest);
+              });
+            },
+          ),
+        ],
       ),
     );
   }
@@ -322,5 +569,126 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       ),
     );
   }
-}
 
+  Widget _buildCoverPhotoUpload() {
+    return GestureDetector(
+      onTap: _pickImage,
+      child: Container(
+        height: 200,
+        width: double.infinity,
+        color: lightPurple.withOpacity(0.3),
+        child: _coverImage != null
+            ? Image.file(_coverImage!, fit: BoxFit.cover)
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(FontAwesomeIcons.image, size: 40, color: primaryColor),
+                  SizedBox(height: 8),
+                  Text("Add Cover Photo", style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(String label, String hint,
+      {TextEditingController? controller,
+      int maxLines = 1,
+      TextInputType keyboardType = TextInputType.text,
+      IconData? icon}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textOnWhite)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: controller,
+            maxLines: maxLines,
+            keyboardType: keyboardType,
+            decoration: InputDecoration(
+              hintText: hint,
+              prefixIcon: icon != null ? Icon(icon, color: primaryColor) : null,
+              filled: true,
+              fillColor: lightPurple.withOpacity(0.2),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropdown() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Event Type",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textOnWhite)),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: lightPurple.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                isExpanded: true,
+                hint: const Text("Select event type"),
+                value: _selectedEventType,
+                icon: const Icon(Icons.arrow_drop_down, color: primaryColor),
+                items: _eventTypes.map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (newValue) {
+                  setState(() {
+                    _selectedEventType = newValue;
+                  });
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDatePicker() {
+    return GestureDetector(
+      onTap: () => _selectDate(context),
+      child: AbsorbPointer(
+        child: _buildTextField(
+          "Date",
+          "Select date",
+          controller: _dateController,
+          icon: FontAwesomeIcons.calendar,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimePicker() {
+    return GestureDetector(
+      onTap: () => _selectTime(context),
+      child: AbsorbPointer(
+        child: _buildTextField(
+          "Time",
+          "Select time",
+          controller: _timeController,
+          icon: FontAwesomeIcons.clock,
+        ),
+      ),
+    );
+  }
+}
