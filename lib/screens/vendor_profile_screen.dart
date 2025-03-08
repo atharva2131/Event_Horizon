@@ -49,7 +49,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
       }
       
       final response = await http.get(
-        Uri.parse('http://127.0.0.1:3000/api/auth/me'),
+        Uri.parse('http://10.0.2.2:3000/api/auth/me'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -92,7 +92,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
       }
       
       final response = await http.put(
-        Uri.parse('http://127.0.0.1:3000/api/auth/update-profile'),
+        Uri.parse('http://10.0.2.2:3000/api/auth/update-profile'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

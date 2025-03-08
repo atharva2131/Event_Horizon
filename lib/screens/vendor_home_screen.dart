@@ -55,7 +55,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
       }
       
       final response = await http.get(
-        Uri.parse('http://127.0.0.1:3000/api/auth/me'),
+        Uri.parse('http://10.0.2.2:3000/api/auth/me'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -92,7 +92,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
       }
       
       final response = await http.get(
-        Uri.parse('http://127.0.0.1:3000/api/vendor/services'),
+        Uri.parse('http://10.0.2.2:3000/api/vendor/services'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -143,7 +143,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
       final newStatus = !services[index]["isActive"];
       
       final response = await http.put(
-        Uri.parse('http://127.0.0.1:3000/api/vendor/services/$serviceId/status'),
+        Uri.parse('http://10.0.2.2:3000/api/vendor/services/$serviceId/status'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -191,7 +191,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
       }
       
       final response = await http.post(
-        Uri.parse('http://127.0.0.1:3000/api/vendor/services'),
+        Uri.parse('http://10.0.2.2:3000/api/vendor/services'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -364,7 +364,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                   final serviceId = services[index]['id'];
                   
                   final response = await http.put(
-                    Uri.parse('http://127.0.0.1:3000/api/vendor/services/$serviceId'),
+                    Uri.parse('http://10.0.2.2:3000/api/vendor/services/$serviceId'),
                     headers: {
                       'Content-Type': 'application/json',
                       'Authorization': 'Bearer $token',
@@ -797,7 +797,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                     final serviceId = services[index]['id'];
                     
                     final response = await http.delete(
-                      Uri.parse('http://127.0.0.1:3000/api/vendor/services/$serviceId'),
+                      Uri.parse('http://10.0.2.2:3000/api/vendor/services/$serviceId'),
                       headers: {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer $token',
