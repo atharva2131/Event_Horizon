@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_countdown_timer/flutter_countdown_timer.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:contacts_service/contacts_service.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -21,9 +21,12 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   List<Contact> _contacts = [];
   bool _isLoadingContacts = false;
   final TextEditingController _newGuestNameController = TextEditingController();
-  final TextEditingController _newGuestEmailController = TextEditingController();
-  final TextEditingController _newGuestPhoneController = TextEditingController();
-  final TextEditingController _invitationMessageController = TextEditingController();
+  final TextEditingController _newGuestEmailController =
+      TextEditingController();
+  final TextEditingController _newGuestPhoneController =
+      TextEditingController();
+  final TextEditingController _invitationMessageController =
+      TextEditingController();
 
   late DateTime eventDateTime;
   int countdownEndTime = 0;
@@ -45,9 +48,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     super.initState();
     _parseEventDateTime();
     _requestContactPermission();
-    
+
     // Initialize invitation message
-    _invitationMessageController.text = "You're invited to ${widget.event['name']}!\n\nJoin us on ${widget.event['date']} at ${widget.event['time']}.\n\nLocation: ${widget.event['location'] ?? 'TBD'}\n\nPlease RSVP by clicking the link below.";
+    _invitationMessageController.text =
+        "You're invited to ${widget.event['name']}!\n\nJoin us on ${widget.event['date']} at ${widget.event['time']}.\n\nLocation: ${widget.event['location'] ?? 'TBD'}\n\nPlease RSVP by clicking the link below.";
   }
 
   void _updateEventAndReturn() {
@@ -66,9 +70,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     setState(() {
       _isLoadingContacts = true;
     });
-    
+
     try {
-      final contacts = await ContactsService.getContacts();
+      final contacts = await FlutterContacts.getContacts();
       setState(() {
         _contacts = contacts.toList();
         _isLoadingContacts = false;
@@ -191,12 +195,12 @@ Please RSVP soon!
                               final contact = _contacts[index];
                               final name = contact.displayName ?? "No Name";
                               final email = contact.emails?.isNotEmpty == true
-                                  ? contact.emails!.first.value ?? ""
+                                  ? contact.emails!.first.address ?? ""
                                   : "";
                               final phone = contact.phones?.isNotEmpty == true
-                                  ? contact.phones!.first.value ?? ""
+                                  ? contact.phones!.first.number ?? ""
                                   : "";
-                              
+
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 8),
                                 decoration: BoxDecoration(
@@ -208,7 +212,9 @@ Please RSVP soon!
                                   leading: CircleAvatar(
                                     backgroundColor: lightPurple,
                                     child: Text(
-                                      name.isNotEmpty ? name.substring(0, 1).toUpperCase() : "?",
+                                      name.isNotEmpty
+                                          ? name.substring(0, 1).toUpperCase()
+                                          : "?",
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
@@ -217,20 +223,27 @@ Please RSVP soon!
                                   ),
                                   title: Text(name),
                                   subtitle: Text(
-                                    email.isNotEmpty ? email : (phone.isNotEmpty ? phone : "No contact info"),
+                                    email.isNotEmpty
+                                        ? email
+                                        : (phone.isNotEmpty
+                                            ? phone
+                                            : "No contact info"),
                                   ),
                                   onTap: () {
                                     List<Map<String, dynamic>> guestList = [];
                                     if (widget.event['guests'] != null) {
-                                      guestList = List<Map<String, dynamic>>.from(widget.event['guests']);
+                                      guestList =
+                                          List<Map<String, dynamic>>.from(
+                                              widget.event['guests']);
                                     }
-                                    
+
                                     // Check if contact already exists in guest list
-                                    bool exists = guestList.any((g) => 
-                                      (g['email'] == email && email.isNotEmpty) || 
-                                      (g['phone'] == phone && phone.isNotEmpty)
-                                    );
-                                    
+                                    bool exists = guestList.any((g) =>
+                                        (g['email'] == email &&
+                                            email.isNotEmpty) ||
+                                        (g['phone'] == phone &&
+                                            phone.isNotEmpty));
+
                                     if (!exists) {
                                       setState(() {
                                         guestList.add({
@@ -241,21 +254,25 @@ Please RSVP soon!
                                         });
                                         widget.event['guests'] = guestList;
                                       });
-                                      
+
                                       _updateEventAndReturn();
-                                      
+
                                       Navigator.pop(context);
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
                                         SnackBar(
-                                          content: Text("$name added to guest list"),
+                                          content:
+                                              Text("$name added to guest list"),
                                           backgroundColor: Colors.green,
                                         ),
                                       );
                                     } else {
                                       Navigator.pop(context);
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
                                         SnackBar(
-                                          content: Text("$name is already in the guest list"),
+                                          content: Text(
+                                              "$name is already in the guest list"),
                                           backgroundColor: Colors.orange,
                                         ),
                                       );
@@ -279,7 +296,7 @@ Please RSVP soon!
     _newGuestNameController.clear();
     _newGuestEmailController.clear();
     _newGuestPhoneController.clear();
-    
+
     showDialog(
       context: context,
       builder: (context) {
@@ -327,9 +344,10 @@ Please RSVP soon!
                 if (_newGuestNameController.text.isNotEmpty) {
                   List<Map<String, dynamic>> guestList = [];
                   if (widget.event['guests'] != null) {
-                    guestList = List<Map<String, dynamic>>.from(widget.event['guests']);
+                    guestList =
+                        List<Map<String, dynamic>>.from(widget.event['guests']);
                   }
-                  
+
                   setState(() {
                     guestList.add({
                       'name': _newGuestNameController.text,
@@ -339,9 +357,9 @@ Please RSVP soon!
                     });
                     widget.event['guests'] = guestList;
                   });
-                  
+
                   _updateEventAndReturn();
-                  
+
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -531,7 +549,8 @@ Please RSVP soon!
       builder: (context) {
         return AlertDialog(
           title: const Text("Delete Guest"),
-          content: Text("Are you sure you want to remove ${guest['name']} from the guest list?"),
+          content: Text(
+              "Are you sure you want to remove ${guest['name']} from the guest list?"),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -540,7 +559,8 @@ Please RSVP soon!
             ElevatedButton(
               onPressed: () {
                 setState(() {
-                  List<Map<String, dynamic>> guestList = List<Map<String, dynamic>>.from(widget.event['guests']);
+                  List<Map<String, dynamic>> guestList =
+                      List<Map<String, dynamic>>.from(widget.event['guests']);
                   guestList.remove(guest);
                   widget.event['guests'] = guestList;
                 });
@@ -561,7 +581,7 @@ Please RSVP soon!
   void _inviteGuest(Map<String, dynamic> guest) {
     String email = guest['email'] ?? '';
     String phone = guest['phone'] ?? '';
-    
+
     if (email.isEmpty && phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -628,7 +648,8 @@ Please RSVP soon!
     final Uri emailUri = Uri(
       scheme: 'mailto',
       path: email,
-      query: 'subject=Invitation to ${widget.event['name']}&body=${Uri.encodeComponent(_invitationMessageController.text)}',
+      query:
+          'subject=Invitation to ${widget.event['name']}&body=${Uri.encodeComponent(_invitationMessageController.text)}',
     );
 
     try {
@@ -763,10 +784,11 @@ Please RSVP soon!
   }
 
   void _sendInvitationsToAll() {
-    List<Map<String, dynamic>> guestList = List<Map<String, dynamic>>.from(widget.event['guests']);
+    List<Map<String, dynamic>> guestList =
+        List<Map<String, dynamic>>.from(widget.event['guests']);
     int emailCount = 0;
     int smsCount = 0;
-    
+
     for (var guest in guestList) {
       if (guest['status'] == 'Not Invited') {
         if (guest['email'] != null && guest['email'].isNotEmpty) {
@@ -774,20 +796,21 @@ Please RSVP soon!
         } else if (guest['phone'] != null && guest['phone'].isNotEmpty) {
           smsCount++;
         }
-        
+
         guest['status'] = 'Invited';
       }
     }
-    
+
     setState(() {
       widget.event['guests'] = guestList;
     });
-    
+
     _updateEventAndReturn();
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text("Invitations prepared: $emailCount emails, $smsCount SMS"),
+        content:
+            Text("Invitations prepared: $emailCount emails, $smsCount SMS"),
         backgroundColor: primaryPurple,
         action: SnackBarAction(
           label: "SEND NOW",
@@ -1013,7 +1036,8 @@ Please RSVP soon!
               ),
             ],
           ),
-          if (widget.event['description'] != null && widget.event['description']!.isNotEmpty) ...[
+          if (widget.event['description'] != null &&
+              widget.event['description']!.isNotEmpty) ...[
             const SizedBox(height: 20),
             Text(
               "About",
@@ -1331,7 +1355,9 @@ Please RSVP soon!
                 )
               : Column(
                   children: [
-                    ...guestList.map((guest) => _buildGuestItem(guest)).toList(),
+                    ...guestList
+                        .map((guest) => _buildGuestItem(guest))
+                        .toList(),
                     const SizedBox(height: 15),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1354,7 +1380,8 @@ Please RSVP soon!
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: Colors.green.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(8),
@@ -1384,7 +1411,7 @@ Please RSVP soon!
     String email = guest['email'] ?? "";
     String phone = guest['phone'] ?? "";
     String status = guest['status'] ?? "Not Invited";
-    
+
     Color statusColor;
     switch (status) {
       case 'Confirmed':

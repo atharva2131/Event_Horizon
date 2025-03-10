@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:contacts_service/contacts_service.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 
@@ -53,9 +53,9 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     setState(() {
       _isLoadingContacts = true;
     });
-    
+
     try {
-      final contacts = await ContactsService.getContacts();
+      final contacts = await FlutterContacts.getContacts();
       setState(() {
         _contacts = contacts.toList();
         _isLoadingContacts = false;
@@ -74,7 +74,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   }
 
   Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
         _coverImage = File(pickedFile.path);
@@ -158,8 +159,10 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                               Navigator.pop(context);
                               _showAddNewGuestDialog();
                             },
-                            icon: const Icon(Icons.person_add, color: primaryColor),
-                            label: const Text("New", style: TextStyle(color: primaryColor)),
+                            icon: const Icon(Icons.person_add,
+                                color: primaryColor),
+                            label: const Text("New",
+                                style: TextStyle(color: primaryColor)),
                           ),
                           IconButton(
                             icon: const Icon(Icons.close),
@@ -189,22 +192,28 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                               final contact = _contacts[index];
                               final name = contact.displayName ?? "No Name";
                               final email = contact.emails?.isNotEmpty == true
-                                  ? contact.emails!.first.value ?? ""
+                                  ? contact.emails!.first.address ?? ""
                                   : "";
                               final phone = contact.phones?.isNotEmpty == true
-                                  ? contact.phones!.first.value ?? ""
+                                  ? contact.phones!.first.number ?? ""
                                   : "";
-                              
+
                               return ListTile(
                                 leading: CircleAvatar(
                                   backgroundColor: primaryColor,
                                   child: Text(
-                                    name.isNotEmpty ? name[0].toUpperCase() : "?",
+                                    name.isNotEmpty
+                                        ? name[0].toUpperCase()
+                                        : "?",
                                     style: const TextStyle(color: Colors.white),
                                   ),
                                 ),
                                 title: Text(name),
-                                subtitle: Text(email.isNotEmpty ? email : (phone.isNotEmpty ? phone : "No contact info")),
+                                subtitle: Text(email.isNotEmpty
+                                    ? email
+                                    : (phone.isNotEmpty
+                                        ? phone
+                                        : "No contact info")),
                                 onTap: () {
                                   setState(() {
                                     _guestList.add({
@@ -217,7 +226,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                                   Navigator.pop(context);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text("$name added to guest list"),
+                                      content:
+                                          Text("$name added to guest list"),
                                       backgroundColor: Colors.green.shade400,
                                     ),
                                   );
@@ -329,7 +339,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           content: const Text("Please fill all required fields"),
           backgroundColor: Colors.red.shade400,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
       return;
@@ -370,13 +381,15 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           icon: const Icon(Icons.arrow_back, color: textOnPurple),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text("Create Event", style: TextStyle(color: textOnPurple)),
+        title:
+            const Text("Create Event", style: TextStyle(color: textOnPurple)),
         centerTitle: true,
         actions: [
           TextButton(
             onPressed: _createEvent,
             child: const Text("Save",
-                style: TextStyle(color: textOnPurple, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    color: textOnPurple, fontWeight: FontWeight.bold)),
           )
         ],
       ),
@@ -391,7 +404,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildTextField("Event Name", "e.g., John & Sarah's Wedding",
-                      controller: _eventNameController, icon: FontAwesomeIcons.star),
+                      controller: _eventNameController,
+                      icon: FontAwesomeIcons.star),
                   _buildDropdown(),
                   Row(
                     children: [
@@ -401,9 +415,12 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     ],
                   ),
                   _buildTextField("Location", "Search venue or address",
-                      controller: _locationController, icon: FontAwesomeIcons.mapMarkerAlt),
+                      controller: _locationController,
+                      icon: FontAwesomeIcons.mapMarkerAlt),
                   _buildTextField("Description", "Describe your event...",
-                      controller: _descriptionController, maxLines: 4, icon: FontAwesomeIcons.alignLeft),
+                      controller: _descriptionController,
+                      maxLines: 4,
+                      icon: FontAwesomeIcons.alignLeft),
                   _buildTextField("Budget", "\$ 0.00",
                       controller: _budgetController,
                       keyboardType: TextInputType.number,
@@ -427,7 +444,10 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text("Guest List",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textOnWhite)),
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: textOnWhite)),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -436,7 +456,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                   controller: _guestController,
                   decoration: InputDecoration(
                     hintText: "Enter guest email or name",
-                    prefixIcon: const Icon(FontAwesomeIcons.user, color: primaryColor),
+                    prefixIcon:
+                        const Icon(FontAwesomeIcons.user, color: primaryColor),
                     filled: true,
                     fillColor: lightPurple.withOpacity(0.2),
                     border: OutlineInputBorder(
@@ -450,8 +471,9 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               ElevatedButton(
                 onPressed: _addGuest,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:const Color.fromARGB(255, 236, 231, 245),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  backgroundColor: const Color.fromARGB(255, 236, 231, 245),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 child: const Text("Add"),
               ),
@@ -467,7 +489,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 label: const Text("Add from Contacts"),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color.fromARGB(255, 236, 231, 245),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
               const SizedBox(width: 10),
@@ -476,8 +499,9 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 icon: const Icon(Icons.person_add),
                 label: const Text("New Contact"),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:const Color.fromARGB(255, 236, 231, 245),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  backgroundColor: const Color.fromARGB(255, 236, 231, 245),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ],
@@ -485,14 +509,17 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           const SizedBox(height: 16),
           _guestList.isNotEmpty
               ? Column(
-                  children: _guestList.map((guest) => _buildGuestListItem(guest)).toList(),
+                  children: _guestList
+                      .map((guest) => _buildGuestListItem(guest))
+                      .toList(),
                 )
               : const Center(
                   child: Padding(
                     padding: EdgeInsets.symmetric(vertical: 20),
                     child: Text(
                       "No guests added yet",
-                      style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+                      style: TextStyle(
+                          color: Colors.grey, fontStyle: FontStyle.italic),
                     ),
                   ),
                 ),
@@ -516,7 +543,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             radius: 20,
             child: Text(
               guest['name']!.isNotEmpty ? guest['name']![0].toUpperCase() : "?",
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(width: 12),
@@ -563,9 +591,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           backgroundColor: primaryColor,
           foregroundColor: textOnPurple,
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
-        child: const Text("Create Event", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        child: const Text("Create Event",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -584,7 +614,9 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 children: const [
                   Icon(FontAwesomeIcons.image, size: 40, color: primaryColor),
                   SizedBox(height: 8),
-                  Text("Add Cover Photo", style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
+                  Text("Add Cover Photo",
+                      style: TextStyle(
+                          color: primaryColor, fontWeight: FontWeight.bold)),
                 ],
               ),
       ),
@@ -602,7 +634,10 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textOnWhite)),
+              style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: textOnWhite)),
           const SizedBox(height: 8),
           TextField(
             controller: controller,
@@ -631,7 +666,10 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text("Event Type",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textOnWhite)),
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: textOnWhite)),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16),
