@@ -276,6 +276,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             userProfile['email'] ?? 'user@example.com',
             style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey),
           ),
+          if (userProfile['phone'] != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Text(
+                userProfile['phone'],
+                style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
+              ),
+            ),
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -403,6 +411,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           _buildSettingOption('Payment Methods', Icons.credit_card, () => _navigateTo(const PaymentMethodsScreen())),
           _buildSettingOption('Help & Support', Icons.help_outline, () => _navigateTo(const HelpSupportScreen())),
           _buildSettingOption('Privacy & Terms', Icons.privacy_tip_outlined, () => _navigateTo(const PrivacyTermsScreen())),
+          _buildSettingOption('Logout', Icons.logout, () => _showLogoutDialog(context)),
         ],
       ),
     );

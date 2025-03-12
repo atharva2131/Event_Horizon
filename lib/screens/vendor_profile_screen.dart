@@ -9,12 +9,12 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class VendorProfileScreen extends StatefulWidget {
-  final int vendorIndex;
+final int vendorIndex;
 
-  const VendorProfileScreen({super.key, required this.vendorIndex});
+const VendorProfileScreen({super.key, required this.vendorIndex});
 
-  @override
-  _VendorProfileScreenState createState() => _VendorProfileScreenState();
+@override
+_VendorProfileScreenState createState() => _VendorProfileScreenState();
 }
 
 class _VendorProfileScreenState extends State<VendorProfileScreen> {
@@ -164,8 +164,27 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
-            onPressed: () {},
+            icon: const Icon(Icons.edit, color: Colors.white),
+            onPressed: () async {
+              final updatedData = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AccountSettingsScreen(
+                    name: vendorProfile['name'] ?? "",
+                    email: vendorProfile['email'] ?? "",
+                    profilePicture: vendorProfile['avatar_url'] ?? "",
+                  ),
+                ),
+              );
+              if (updatedData != null) {
+                _updateProfile(updatedData['name'], updatedData['email'],
+                    updatedData['profilePicture']);
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () => _showLogoutDialog(context),
           ),
         ],
       ),
@@ -215,6 +234,40 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
     );
   }
 
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Logout', style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor)),
+          content: const Text('Are you sure you want to log out?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _logout(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+              ),
+              child: const Text(
+                'Logout',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildProfileHeader() {
     return Container(
       decoration: BoxDecoration(
@@ -257,6 +310,17 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
               color: Colors.white70,
             ),
           ),
+          if (vendorProfile['phone'] != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Text(
+                vendorProfile['phone'],
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.white70,
+                ),
+              ),
+            ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -280,6 +344,35 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () async {
+              final updatedData = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AccountSettingsScreen(
+                    name: vendorProfile['name'] ?? "",
+                    email: vendorProfile['email'] ?? "",
+                    profilePicture: vendorProfile['avatar_url'] ?? "",
+                  ),
+                ),
+              );
+              if (updatedData != null) {
+                _updateProfile(updatedData['name'], updatedData['email'],
+                    updatedData['profilePicture']);
+              }
+            },
+            icon: const Icon(Icons.edit),
+            label: const Text('Edit Profile'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: primaryColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
           ),
         ],
       ),
@@ -453,6 +546,13 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                     context,
                     MaterialPageRoute(
                         builder: (context) => PrivacyTermsScreen())),
+              ),
+              _buildDivider(),
+              _buildSettingOption(
+                'Logout',
+                Icons.logout,
+                context,
+                () => _showLogoutDialog(context),
               ),
             ],
           ),
