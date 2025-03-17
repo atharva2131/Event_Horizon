@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:eventhorizon/screens/user_dashboard.dart';
 import 'package:eventhorizon/screens/vendor_dashboard.dart';
+import 'package:eventhorizon/screens/admin_dashboard.dart'; // Import admin dashboard
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -36,7 +37,7 @@ class _SignInPageState extends State<SignInPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _fullNameController.dispose();
-    _phoneController.  dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -82,9 +83,23 @@ class _SignInPageState extends State<SignInPage> {
         // Save user data if available
         if (responseData.containsKey('user')) {
           prefs.setString('userData', jsonEncode(responseData['user']));
+          
+          // Check if the user is an admin regardless of which login form they used
+          final userData = responseData['user'];
+          if (userData != null && userData['role'] == 'admin') {
+            // Redirect to admin dashboard if user is an admin
+            if (!mounted) return;
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AdminDashboardScreen(),
+              ),
+            );
+            return; // Exit early
+          }
         }
 
-        // Navigate to appropriate dashboard
+        // Navigate to appropriate dashboard for regular users/vendors
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
@@ -369,7 +384,7 @@ class _SignInPageState extends State<SignInPage> {
             return 'Password must be at least 10 characters long';
           }
           
-          final passwordRegex = RegExp(r'^(?=.[a-z])(?=.[A-Z])(?=.\d)(?=.[\W_])(?!.*\s).{10,}$');
+          final passwordRegex = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_])(?!.*\s).{10,}$');
           if (!passwordRegex.hasMatch(value)) {
             return 'Password must include uppercase, lowercase, number, and special character';
           }
@@ -478,3 +493,4 @@ class _SignInPageState extends State<SignInPage> {
     );
   }
 }
+

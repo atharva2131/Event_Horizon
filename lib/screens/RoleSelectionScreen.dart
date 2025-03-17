@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'SignInPage.dart'; // Import SignInPage
+import 'SignInPage.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
@@ -102,6 +102,8 @@ class RoleSelectionScreen extends StatelessWidget {
                       },
                     ),
                   ),
+                  
+                  // Admin card removed
                   
                   const SizedBox(height: 24),
                   
