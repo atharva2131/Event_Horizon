@@ -4,17 +4,18 @@ import 'package:eventhorizon/screens/vendor_notifications_screen.dart';
 import 'package:eventhorizon/screens/vendor_payment_methods_screen.dart';
 import 'package:eventhorizon/screens/vendor_help_support_screen.dart';
 import 'package:eventhorizon/screens/vendor_privacy_terms_screen.dart';
+import 'package:eventhorizon/screens/SignInPage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class VendorProfileScreen extends StatefulWidget {
-final int vendorIndex;
+  final int vendorIndex;
 
-const VendorProfileScreen({super.key, required this.vendorIndex});
+  const VendorProfileScreen({super.key, required this.vendorIndex});
 
-@override
-_VendorProfileScreenState createState() => _VendorProfileScreenState();
+  @override
+  _VendorProfileScreenState createState() => _VendorProfileScreenState();
 }
 
 class _VendorProfileScreenState extends State<VendorProfileScreen> {
@@ -48,6 +49,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
         return;
       }
       
+      // Use the correct API URL
       final response = await http.get(
         Uri.parse('http://192.168.29.168:3000/api/auth/me'),
         headers: {
@@ -62,6 +64,9 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
           vendorProfile = responseData['user'] ?? {};
           isLoading = false;
         });
+      } else if (response.statusCode == 401) {
+        // Handle unauthorized - token expired
+        _handleSessionExpired();
       } else {
         setState(() {
           errorMessage = 'Failed to load profile: ${response.statusCode}';
@@ -76,8 +81,26 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
     }
   }
 
-  void _updateProfile(
-      String updatedName, String updatedEmail, String updatedPhoto) async {
+  void _handleSessionExpired() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+    await prefs.remove('userData');
+    
+    if (!mounted) return;
+    
+    // Show message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Your session has expired. Please login again.')),
+    );
+    
+    // Navigate to login screen
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => SignInPage(isUser: false,)),
+      (route) => false,
+    );
+  }
+
+  void _updateProfile(String updatedName, String updatedEmail, String updatedPhoto) async {
     setState(() => isLoading = true);
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -91,6 +114,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
         return;
       }
       
+      // Use the correct API URL and method
       final response = await http.put(
         Uri.parse('http://192.168.29.168:3000/api/auth/update-profile'),
         headers: {
@@ -113,9 +137,11 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully')),
         );
+      } else if (response.statusCode == 401) {
+        _handleSessionExpired();
       } else {
         setState(() {
-          errorMessage = 'Failed to update profile: ${response.statusCode}';
+          errorMessage = 'Failed to update profile: ${response.statusCode} - ${response.body}';
           isLoading = false;
         });
       }
@@ -130,12 +156,36 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
   void _logout(BuildContext context) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      
+      // Call logout API endpoint
+      if (token != null) {
+        try {
+          await http.post(
+            Uri.parse('http://192.168.29.168:3000/api/auth/logout'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          );
+        } catch (e) {
+          // Continue with local logout even if API call fails
+          print('Error calling logout API: $e');
+        }
+      }
+      
+      // Clear local storage
       await prefs.remove('token');
       await prefs.remove('userData');
       
-      // Navigate to login screen
+      // Navigate to login screen - use MaterialPageRoute to avoid route issues
       if (!mounted) return;
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => SignInPage(isUser: false)),
+        (route) => false,
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error logging out: $e')),
@@ -172,7 +222,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                   builder: (context) => AccountSettingsScreen(
                     name: vendorProfile['name'] ?? "",
                     email: vendorProfile['email'] ?? "",
-                    profilePicture: vendorProfile['avatar_url'] ?? "",
+                    profilePicture: vendorProfile['profileImage'] ?? "",
                   ),
                 ),
               );
@@ -291,7 +341,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
             ),
             child: CircleAvatar(
               radius: 50,
-              backgroundImage: NetworkImage(vendorProfile['avatar_url'] ?? "https://via.placeholder.com/150"),
+              backgroundImage: NetworkImage(vendorProfile['profileImage'] ?? "https://via.placeholder.com/150"),
             ),
           ),
           const SizedBox(height: 16),
@@ -354,7 +404,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                   builder: (context) => AccountSettingsScreen(
                     name: vendorProfile['name'] ?? "",
                     email: vendorProfile['email'] ?? "",
-                    profilePicture: vendorProfile['avatar_url'] ?? "",
+                    profilePicture: vendorProfile['profileImage'] ?? "",
                   ),
                 ),
               );
@@ -497,7 +547,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                       builder: (context) => AccountSettingsScreen(
                         name: vendorProfile['name'] ?? "",
                         email: vendorProfile['email'] ?? "",
-                        profilePicture: vendorProfile['avatar_url'] ?? "",
+                        profilePicture: vendorProfile['profileImage'] ?? "",
                       ),
                     ),
                   );

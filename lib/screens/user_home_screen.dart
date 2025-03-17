@@ -1,13 +1,13 @@
-import 'package:eventhorizon/screens/budget_tracker_screen.dart';
-import 'package:eventhorizon/screens/event_timeline_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import 'dart:io';
-import 'package:http/http.dart' as http;
-import 'User_CreateEventScreen.dart';
+import 'package:eventhorizon/screens/budget_tracker_screen.dart';
+import 'package:eventhorizon/screens/event_timeline_screen.dart';
+import 'package:eventhorizon/screens/User_CreateEventScreen.dart';
 import 'package:eventhorizon/widgets/user_bottom_nav_screen.dart';
-import 'EventDetailScreen.dart';
+import 'package:eventhorizon/screens/EventDetailScreen.dart';
+import '../services/event_service.dart';
+import '../services/api_services.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,9 +22,13 @@ class _HomeScreenState extends State<HomeScreen> {
   final Color primaryLightColor = Colors.deepPurple[100]!;
   
   List<Map<String, dynamic>> events = [];
-  Map<String, dynamic> userProfile = {};
+  Map<String, dynamic> userProfile = {
+    'name': 'User',
+    'avatar_url': 'https://via.placeholder.com/150',
+  };
   bool isLoading = true;
   String? errorMessage;
+  final EventService _eventService = EventService();
 
   @override
   void initState() {
@@ -47,57 +51,75 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
       
-      final response = await http.get(
-        Uri.parse('http://192.168.29.168:3000/api/auth/me'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
+      // Use the ApiService instead of direct http call
+      final response = await ApiService.get('/auth/me');
+      
+      if (response != null && response['user'] != null) {
         setState(() {
-          userProfile = responseData['user'] ?? {};
+          userProfile = response['user'];
           isLoading = false;
         });
       } else {
         setState(() {
-          errorMessage = 'Failed to load profile: ${response.statusCode}';
+          // Keep default profile but don't show error
           isLoading = false;
         });
       }
     } catch (e) {
+      print('Error loading profile: $e');
       setState(() {
-        errorMessage = 'Error loading profile: $e';
+        // Don't show error to user, just use default profile
         isLoading = false;
       });
     }
   }
 
-  Future<void> _loadEvents() async {
-    try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? eventsJson = prefs.getString('events');
-      if (eventsJson != null) {
-        setState(() {
-          events = List<Map<String, dynamic>>.from(json.decode(eventsJson));
-        });
-      }
-    } catch (e) {
-      print('Error loading events: $e');
-    }
-  }
+  // Only updating the _loadEvents method to properly handle events and images
 
-  Future<void> _saveEvents() async {
-    try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String eventsJson = json.encode(events);
-      prefs.setString('events', eventsJson);
-    } catch (e) {
-      print('Error saving events: $e');
+Future<void> _loadEvents() async {
+  setState(() => isLoading = true);
+  try {
+    print('Loading events...');
+    // Get events from the API
+    final apiEvents = await _eventService.getEvents();
+    print('Loaded ${apiEvents.length} events from API');
+    
+    // Process each event to ensure image URLs are correct
+    for (var event in apiEvents) {
+      if (event['image_url'] != null && event['image_url'].isNotEmpty) {
+        print('Event ${event['name']} has image: ${event['image_url']}');
+        
+        // Ensure image URL is properly formatted
+        if (!event['image_url'].startsWith('http')) {
+          // If it's a local file path, check if it exists
+          final file = File(event['image_url']);
+          if (await file.exists()) {
+            print('Image file exists locally: ${event['image_url']}');
+          } else {
+            // If not a valid local file, try to construct a full URL
+            event['image_url'] = '${ApiService.baseUrl}${event['image_url']}';
+            print('Constructed full URL: ${event['image_url']}');
+          }
+        }
+      } else {
+        print('Event ${event['name']} has no image');
+      }
     }
+    
+    setState(() {
+      events = apiEvents;
+      isLoading = false;
+    });
+    
+    print('Events set in state: ${events.length}');
+  } catch (e) {
+    print('Error loading events: $e');
+    setState(() {
+      events = []; // Set empty events list
+      isLoading = false;
+    });
   }
+}
 
   Future<void> _navigateToCreateEventScreen(BuildContext context) async {
     final newEvent = await Navigator.push(
@@ -106,10 +128,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     if (newEvent != null) {
-      setState(() {
-        events.add(newEvent);
-      });
-      _saveEvents();
+      // Refresh events list
+      _loadEvents();
     }
   }
 
@@ -140,34 +160,41 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
-                          onPressed: _loadUserProfile,
+                          onPressed: () {
+                            _loadUserProfile();
+                            _loadEvents();
+                          },
                           child: const Text('Retry'),
                         ),
                       ],
                     ),
                   ),
                 )
-              : SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildHeader(),
-                      const SizedBox(height: 24),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildCreateEventSection(),
-                            const SizedBox(height: 24),
-                            _buildEventsAndBudget(context),
-                            const SizedBox(height: 24),
-                            _buildCreatedEvents(),
-                            const SizedBox(height: 24),
-                          ],
+              : RefreshIndicator(
+                  onRefresh: _loadEvents,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeader(),
+                        const SizedBox(height: 24),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildCreateEventSection(),
+                              const SizedBox(height: 24),
+                              _buildEventsAndBudget(context),
+                              const SizedBox(height: 24),
+                              _buildCreatedEvents(),
+                              const SizedBox(height: 24),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
       floatingActionButton: FloatingActionButton(
@@ -179,6 +206,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeader() {
+    // Extract first name safely
+    String firstName = 'User';
+    if (userProfile['name'] != null && userProfile['name'].toString().isNotEmpty) {
+      firstName = userProfile['name'].toString().split(' ')[0];
+    }
+    
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 40, 16, 20),
       decoration: BoxDecoration(
@@ -210,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Welcome back, ${userProfile['name']?.split(' ')[0] ?? 'User'}!",
+                    "Welcome back, $firstName!",
                     style: const TextStyle(
                       fontSize: 18, 
                       fontWeight: FontWeight.bold,
@@ -264,6 +297,16 @@ class _HomeScreenState extends State<HomeScreen> {
               width: double.infinity,
               height: 180,
               fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: double.infinity,
+                  height: 180,
+                  color: primaryLightColor,
+                  child: const Center(
+                    child: Icon(Icons.image_not_supported, size: 50, color: Colors.white),
+                  ),
+                );
+              },
             ),
           ),
           Container(
@@ -368,9 +411,31 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildEventsAndBudget(BuildContext context) {
     // Get event counts from user profile or default to 0
-    final upcomingEvents = userProfile['upcoming_events_count'] ?? 0;
-    final budgetUsed = userProfile['budget_used'] ?? 0;
-    final totalBudget = userProfile['total_budget'] ?? 0;
+    final upcomingEvents = events.where((e) {
+      try {
+        final dateParts = e['date'].split('/');
+        final eventDate = DateTime(
+          int.parse(dateParts[2]),
+          int.parse(dateParts[1]),
+          int.parse(dateParts[0]),
+        );
+        return eventDate.isAfter(DateTime.now());
+      } catch (e) {
+        return false;
+      }
+    }).length;
+    
+    // Calculate budget used and total
+    double budgetUsed = 0;
+    double totalBudget = 0;
+    
+    for (var event in events) {
+      if (event['budget'] != null && event['budget'].toString().isNotEmpty) {
+        totalBudget += double.tryParse(event['budget'].toString()) ?? 0;
+        // Assume 50% of budget is used for demo purposes
+        budgetUsed += (double.tryParse(event['budget'].toString()) ?? 0) * 0.5;
+      }
+    }
     
     return Row(
       children: [
@@ -394,7 +459,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: _infoCard(
               Icons.attach_money,
               "Budget",
-              "\$$budgetUsed / \$$totalBudget",
+              "\$${budgetUsed.toStringAsFixed(0)} / \$${totalBudget.toStringAsFixed(0)}",
               Colors.green,
             ),
           ),
@@ -512,10 +577,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ).then((value) {
                         if (value != null && value is Map<String, dynamic>) {
-                          setState(() {
-                            events[index] = value;
-                          });
-                          _saveEvents();
+                          // Refresh events list after returning from detail screen
+                          _loadEvents();
                         }
                       });
                     },
@@ -577,11 +640,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                       color: Colors.grey[600],
                                     ),
                                     const SizedBox(width: 6),
-                                    Text(
-                                      event['location'] ?? "No location set",
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: 14,
+                                    Expanded(
+                                      child: Text(
+                                        event['location'] ?? "No location set",
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 14,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],
@@ -657,55 +723,77 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _displayEventImage(String? imageUrl) {
-    if (imageUrl == null || imageUrl.isEmpty) {
-      return Container(
-        width: double.infinity,
-        height: 180,
-        color: primaryLightColor,
-        child: Icon(
-          Icons.image,
-          size: 64,
-          color: primaryColor,
-        ),
-      );
-    } else if (imageUrl.startsWith("http")) {
-      return Image.network(
-        imageUrl,
-        width: double.infinity,
-        height: 180,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            width: double.infinity,
-            height: 180,
-            color: primaryLightColor,
-            child: Icon(
-              Icons.broken_image,
-              size: 64,
-              color: primaryColor,
-            ),
-          );
-        },
-      );
-    } else {
-      return Image.file(
-        File(imageUrl),
-        width: double.infinity,
-        height: 180,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            width: double.infinity,
-            height: 180,
-            color: primaryLightColor,
-            child: Icon(
-              Icons.broken_image,
-              size: 64,
-              color: primaryColor,
-            ),
-          );
-        },
-      );
-    }
+  print('Displaying image: $imageUrl');
+  
+  if (imageUrl == null || imageUrl.isEmpty) {
+    return Container(
+      width: double.infinity,
+      height: 180,
+      color: primaryLightColor,
+      child: Icon(
+        Icons.image,
+        size: 64,
+        color: primaryColor,
+      ),
+    );
+  } else if (imageUrl.startsWith("http")) {
+    return Image.network(
+      imageUrl,
+      width: double.infinity,
+      height: 180,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        print('Error loading network image: $error');
+        return Container(
+          width: double.infinity,
+          height: 180,
+          color: primaryLightColor,
+          child: Icon(
+            Icons.broken_image,
+            size: 64,
+            color: primaryColor,
+          ),
+        );
+      },
+    );
+  } else {
+    // Try to load as a local file
+    return Image.file(
+      File(imageUrl),
+      width: double.infinity,
+      height: 180,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        print('Error loading file image: $error');
+        // If local file fails, try as a relative URL
+        return Image.network(
+          '${ApiService.baseUrl}$imageUrl',
+          width: double.infinity,
+          height: 180,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) {
+            return Container(
+              width: double.infinity,
+              height: 180,
+              color: primaryLightColor,
+              child: Icon(
+                Icons.broken_image,
+                size: 64,
+                color: primaryColor,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+}
+
+// Extension to capitalize first letter
+extension StringExtension on String {
+  String capitalize() {
+    if (isEmpty) return this;
+    return "${this[0].toUpperCase()}${substring(1)}";
   }
 }

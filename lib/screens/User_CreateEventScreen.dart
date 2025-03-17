@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
+import 'package:intl/intl.dart';
+import '../services/event_service.dart';
 
 class CreateEventScreen extends StatefulWidget {
   const CreateEventScreen({super.key});
@@ -25,10 +27,16 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   final _newGuestEmailController = TextEditingController();
   final _newGuestPhoneController = TextEditingController();
   String? _selectedEventType;
-  final List<String> _eventTypes = ["Wedding", "Birthday", "Conference"];
+  final List<String> _eventTypes = [
+    "Wedding", "Birthday", "Corporate", "Holiday", 
+    "Anniversary", "Graduation", "Baby Shower", "Retirement", "Other"
+  ];
   final List<Map<String, dynamic>> _guestList = [];
   List<Contact> _contacts = [];
   bool _isLoadingContacts = false;
+  bool _isCreatingEvent = false;
+
+  final EventService _eventService = EventService();
 
   static const Color primaryColor = Colors.deepPurple;
   static const Color lightPurple = Color(0xFFD1C4E9);
@@ -106,7 +114,10 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
     if (picked != null) {
       setState(() {
-        _timeController.text = picked.format(context);
+        // Format the time as "HH:mm" (24-hour format)
+        final hour = picked.hour.toString().padLeft(2, '0');
+        final minute = picked.minute.toString().padLeft(2, '0');
+        _timeController.text = "$hour:$minute";
       });
     }
   }
@@ -191,11 +202,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                             itemBuilder: (context, index) {
                               final contact = _contacts[index];
                               final name = contact.displayName ?? "No Name";
-                              final email = contact.emails?.isNotEmpty == true
-                                  ? contact.emails!.first.address ?? ""
+                              final email = contact.emails.isNotEmpty == true
+                                  ? contact.emails.first.address ?? ""
                                   : "";
-                              final phone = contact.phones?.isNotEmpty == true
-                                  ? contact.phones!.first.number ?? ""
+                              final phone = contact.phones.isNotEmpty == true
+                                  ? contact.phones.first.number ?? ""
                                   : "";
 
                               return ListTile(
@@ -329,24 +340,122 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     );
   }
 
-  void _createEvent() {
-    if (_eventNameController.text.isEmpty ||
-        _selectedEventType == null ||
-        _dateController.text.isEmpty ||
-        _timeController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text("Please fill all required fields"),
-          backgroundColor: Colors.red.shade400,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-      return;
+  // Only updating the _createEvent method to handle image upload better
+
+Future<void> _createEvent() async {
+  if (_eventNameController.text.isEmpty ||
+      _selectedEventType == null ||
+      _dateController.text.isEmpty ||
+      _timeController.text.isEmpty ||
+      _locationController.text.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text("Please fill all required fields"),
+        backgroundColor: Colors.red.shade400,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+    return;
+  }
+
+  setState(() {
+    _isCreatingEvent = true;
+  });
+
+  try {
+    // Parse date
+    List<String> dateParts = _dateController.text.split('/');
+    if (dateParts.length != 3) {
+      throw FormatException("Invalid date format. Expected dd/MM/yyyy");
     }
 
+    // Fix the time string if it contains a dot (.)
+    String timeText = _timeController.text.replaceAll('.', ':');
+
+    // Parse time
+    List<String> timeParts = timeText.split(':');
+    if (timeParts.length != 2) {
+      throw FormatException("Invalid time format. Expected HH:mm");
+    }
+
+    // Format date for API
+    String formattedDate = "${dateParts[2]}-${dateParts[1].padLeft(2, '0')}-${dateParts[0].padLeft(2, '0')}"; // YYYY-MM-DD
+    
+    // Format guests properly
+    List<Map<String, dynamic>> formattedGuests = _guestList.map((guest) => {
+      'name': guest['name'] ?? '',
+      'email': guest['email'] ?? '',
+      'phone': guest['phone'] ?? '',
+      'rsvpStatus': 'pending',
+      'inviteSent': false,
+      'source': 'manual',
+    }).toList();
+
+    // Parse budget safely
+    double? budget;
+    if (_budgetController.text.isNotEmpty) {
+      budget = double.tryParse(_budgetController.text);
+    }
+
+    // Create event data with separate eventTime field
+    Map<String, dynamic> eventData = {
+      'eventName': _eventNameController.text,
+      'eventDate': formattedDate,
+      'eventTime': "${timeParts[0].padLeft(2, '0')}:${timeParts[1].padLeft(2, '0')}", // HH:MM
+      'location': _locationController.text,
+      'description': _descriptionController.text.isNotEmpty ? _descriptionController.text : "",
+      'budget': budget ?? 0,
+      'category': _selectedEventType,
+      'isPublic': false,
+      'status': 'planning',
+      'guests': formattedGuests,
+    };
+
+    // Print the data being sent
+    print("Sending event data: $eventData");
+
+    // Create event on the server
+    final createdEvent = await _eventService.createEvent(eventData);
+    
+    // Upload image if selected
+    String? imageUrl;
+    if (_coverImage != null && createdEvent['_id'] != null) {
+      try {
+        // Verify the image file exists and has content
+        if (await _coverImage!.exists() && await _coverImage!.length() > 0) {
+          print("Uploading image for event: ${createdEvent['_id']}");
+          
+          // Try to upload the image
+          imageUrl = await _eventService.uploadEventImage(createdEvent['_id'], _coverImage!);
+          print("Image uploaded successfully: $imageUrl");
+          
+          // Update event with image URL if upload was successful
+          if (imageUrl.isNotEmpty) {
+            await _eventService.updateEvent(createdEvent['_id'], {
+              'eventImage': imageUrl
+            });
+            print("Event updated with image URL: $imageUrl");
+          }
+        } else {
+          print("Image file is invalid or empty");
+        }
+      } catch (e) {
+        print("Error uploading image: $e");
+        // Continue with event creation even if image upload fails
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Event created but image upload failed: $e"),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+
+    // Format the event for the app
     final newEvent = {
+      'id': createdEvent['_id'],
       'name': _eventNameController.text,
       'type': _selectedEventType!,
       'date': _dateController.text,
@@ -354,9 +463,13 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       'location': _locationController.text,
       'description': _descriptionController.text,
       'budget': _budgetController.text,
-      'image_url': _coverImage?.path ?? '',
+      'image_url': imageUrl ?? '',
       'guests': _guestList,
     };
+
+    setState(() {
+      _isCreatingEvent = false;
+    });
 
     Navigator.pop(context, newEvent);
 
@@ -368,7 +481,21 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
+  } catch (e) {
+    setState(() {
+      _isCreatingEvent = false;
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Error creating event: $e"),
+        backgroundColor: Colors.red.shade400,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -386,10 +513,16 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         centerTitle: true,
         actions: [
           TextButton(
-            onPressed: _createEvent,
-            child: const Text("Save",
-                style: TextStyle(
-                    color: textOnPurple, fontWeight: FontWeight.bold)),
+            onPressed: _isCreatingEvent ? null : _createEvent,
+            child: _isCreatingEvent 
+              ? const SizedBox(
+                  width: 20, 
+                  height: 20, 
+                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                )
+              : const Text("Save",
+                  style: TextStyle(
+                      color: textOnPurple, fontWeight: FontWeight.bold)),
           )
         ],
       ),
@@ -586,7 +719,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: _createEvent,
+        onPressed: _isCreatingEvent ? null : _createEvent,
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
           foregroundColor: textOnPurple,
@@ -594,8 +727,17 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
-        child: const Text("Create Event",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        child: _isCreatingEvent
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : const Text("Create Event",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
       ),
     );
   }

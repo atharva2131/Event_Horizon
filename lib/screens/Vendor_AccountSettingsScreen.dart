@@ -72,7 +72,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           _nameController.text = userData['name'] ?? widget.name;
           _emailController.text = userData['email'] ?? widget.email;
           _phoneController.text = userData['phone'] ?? "";
-          profilePicture = userData['avatar_url'] ?? widget.profilePicture;
+          profilePicture = userData['profileImage'] ?? widget.profilePicture;
         });
       }
     } catch (e) {
@@ -160,7 +160,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update profile: ${response.statusCode}')),
+          SnackBar(content: Text('Failed to update profile: ${response.statusCode} - ${response.body}')),
         );
       }
     } catch (e) {
@@ -470,3 +470,5 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     );
   }
 }
+
+
