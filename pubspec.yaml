@@ -22,9 +22,9 @@ dependencies:
   path_provider: ^2.0.14
   share_plus: ^10.1.4
   url_launcher: ^6.1.6
-  fl_chart: ^0.65.0
+  fl_chart: ^0.70.2
   http: ^1.1.0
-  google_fonts: ^5.1.0
+  google_fonts: ^6.2.1
   timeline_tile: ^2.0.0
   permission_handler: ^11.4.0
   cupertino_icons: ^1.0.8

@@ -86,19 +86,21 @@ Future<void> _loadEvents() async {
     
     // Process each event to ensure image URLs are correct
     for (var event in apiEvents) {
-      if (event['image_url'] != null && event['image_url'].isNotEmpty) {
-        print('Event ${event['name']} has image: ${event['image_url']}');
+      if (event['eventImage'] != null && event['eventImage'].isNotEmpty) {
+        print('Event ${event['name']} has image: ${event['eventImage']}');
+        
         
         // Ensure image URL is properly formatted
-        if (!event['image_url'].startsWith('http')) {
+        if (!event['eventImage'].startsWith('http')) {
           // If it's a local file path, check if it exists
-          final file = File(event['image_url']);
+          final file = File(event['eventImage']);
           if (await file.exists()) {
-            print('Image file exists locally: ${event['image_url']}');
+            print('Image file exists locally: ${event['eventImage']}');
           } else {
             // If not a valid local file, try to construct a full URL
-            event['image_url'] = '${ApiService.baseUrl}${event['image_url']}';
-            print('Constructed full URL: ${event['image_url']}');
+            event['eventImage'] = '${ApiService.baseUrl}${event['eventImage']}';
+            print('Constructed full URL: ${event['eventImage']}');
+            
           }
         }
       } else {
@@ -603,7 +605,7 @@ Future<void> _loadEvents() async {
                               topLeft: Radius.circular(16),
                               topRight: Radius.circular(16),
                             ),
-                            child: _displayEventImage(event['image_url']),
+                            child: _displayEventImage(event['eventImage']),
                           ),
                           Padding(
                             padding: const EdgeInsets.all(16.0),
