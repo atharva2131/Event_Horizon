@@ -1,3 +1,4 @@
+// lib/screens/User_CreateEventScreen.dart
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
@@ -28,8 +29,15 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   final _newGuestPhoneController = TextEditingController();
   String? _selectedEventType;
   final List<String> _eventTypes = [
-    "Wedding", "Birthday", "Corporate", "Holiday", 
-    "Anniversary", "Graduation", "Baby Shower", "Retirement", "Other"
+    "Wedding",
+    "Birthday",
+    "Corporate",
+    "Holiday",
+    "Anniversary",
+    "Graduation",
+    "Baby Shower",
+    "Retirement",
+    "Other",
   ];
   final List<Map<String, dynamic>> _guestList = [];
   List<Contact> _contacts = [];
@@ -39,10 +47,10 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   final EventService _eventService = EventService();
 
   static const Color primaryColor = Colors.deepPurple;
-  static const Color lightPurple = Color(0xFFD1C4E9);
+  static const Color lightPurple = Color(0xffd1c4e9);
   static const Color backgroundColor = Colors.white;
   static const Color textOnPurple = Colors.white;
-  static const Color textOnWhite = Color(0xFF311B92);
+  static const Color textOnWhite = Color(0xff311b92);
 
   @override
   void initState() {
@@ -143,8 +151,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) {
-        return StatefulBuilder(
+      builder: (context) => StatefulBuilder(
           builder: (context, setModalState) {
             return Container(
               padding: const EdgeInsets.all(20),
@@ -251,8 +258,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               ),
             );
           },
-        );
-      },
+        ),
     );
   }
 
@@ -340,6 +346,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     );
   }
 
+<<<<<<< HEAD
   // FIXED: Create event with proper image upload handling
   Future<void> _createEvent() async {
     if (_eventNameController.text.isEmpty ||
@@ -347,6 +354,16 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         _dateController.text.isEmpty ||
         _timeController.text.isEmpty ||
         _locationController.text.isEmpty) {
+=======
+  Future<void> _createEvent() async {
+    if (
+      _eventNameController.text.isEmpty ||
+      _selectedEventType == null ||
+      _dateController.text.isEmpty ||
+      _timeController.text.isEmpty ||
+      _locationController.text.isEmpty
+    ) {
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text("Please fill all required fields"),
@@ -364,22 +381,34 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
     try {
       // Parse date
+<<<<<<< HEAD
       List<String> dateParts = _dateController.text.split('/');
+=======
+      List<String> dateParts = _dateController.text.split("/");
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
       if (dateParts.length != 3) {
         throw FormatException("Invalid date format. Expected dd/MM/yyyy");
       }
 
       // Fix the time string if it contains a dot (.)
+<<<<<<< HEAD
       String timeText = _timeController.text.replaceAll('.', ':');
 
       // Parse time
       List<String> timeParts = timeText.split(':');
+=======
+      String timeText = _timeController.text.replaceAll(".", ":");
+
+      // Parse time
+      List<String> timeParts = timeText.split(":");
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
       if (timeParts.length != 2) {
         throw FormatException("Invalid time format. Expected HH:mm");
       }
 
       // Format date for API
       String formattedDate = "${dateParts[2]}-${dateParts[1].padLeft(2, '0')}-${dateParts[0].padLeft(2, '0')}"; // YYYY-MM-DD
+<<<<<<< HEAD
       
       // Format guests properly
       List<Map<String, dynamic>> formattedGuests = _guestList.map((guest) => {
@@ -390,6 +419,20 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         'inviteSent': false,
         'source': 'manual',
       }).toList();
+=======
+
+      // Format guests properly
+      List<Map<String, dynamic>> formattedGuests = _guestList
+        .map((guest) => {
+          "name": guest['name'] ?? '',
+          'email': guest['email'] ?? '',
+          'phone': guest['phone'] ?? '',
+          'rsvpStatus': 'pending',
+          'inviteSent': false,
+          'source': 'manual',
+        })
+        .toList();
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
 
       // Parse budget safely
       double? budget;
@@ -407,7 +450,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         'budget': budget ?? 0,
         'category': _selectedEventType,
         'isPublic': false,
+<<<<<<< HEAD
         'status': 'planning',
+=======
+        'status': "planning",
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
         'guests': formattedGuests,
       };
 
@@ -416,6 +463,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
       // Create event on the server
       final createdEvent = await _eventService.createEvent(eventData);
+<<<<<<< HEAD
       
       // Upload image if selected
       String? imageUrl;
@@ -433,6 +481,25 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             if (imageUrl.isNotEmpty) {
               await _eventService.updateEvent(createdEvent['_id'], {
                 'eventImage': imageUrl
+=======
+
+      // Upload image if selected
+      String? imageUrl;
+      if (_coverImage != null && createdEvent["_id"] != null) {
+        try {
+          // Verify the image file exists and has content
+          if ((await _coverImage!.exists()) && (await _coverImage!.length()) > 0) {
+            print("Uploading image for event: ${createdEvent['_id']}");
+
+            // Try to upload the image
+            imageUrl = await _eventService.uploadEventImage(createdEvent["_id"], _coverImage!);
+            print("Image uploaded successfully: $imageUrl");
+
+            // Update event with image URL if upload was successful
+            if (imageUrl != null && imageUrl.isNotEmpty) {
+              await _eventService.updateEvent(createdEvent["_id"], {
+                'eventImage': imageUrl,
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
               });
               print("Event updated with image URL: $imageUrl");
             }
@@ -454,7 +521,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
       // Format the event for the app
       final newEvent = {
+<<<<<<< HEAD
         'id': createdEvent['_id'],
+=======
+        'id': createdEvent["_id"],
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
         'name': _eventNameController.text,
         'type': _selectedEventType!,
         'date': _dateController.text,
@@ -462,7 +533,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         'location': _locationController.text,
         'description': _descriptionController.text,
         'budget': _budgetController.text,
+<<<<<<< HEAD
         'image_url': imageUrl ?? '',
+=======
+        'eventImage': imageUrl ?? "",
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
         'guests': _guestList,
       };
 
@@ -484,7 +559,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       setState(() {
         _isCreatingEvent = false;
       });
+<<<<<<< HEAD
       
+=======
+
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Error creating event: $e"),
@@ -507,8 +586,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           icon: const Icon(Icons.arrow_back, color: textOnPurple),
           onPressed: () => Navigator.pop(context),
         ),
-        title:
-            const Text("Create Event", style: TextStyle(color: textOnPurple)),
+        title: const Text("Create Event", style: TextStyle(color: textOnPurple)),
         centerTitle: true,
         actions: [
           TextButton(
@@ -703,11 +781,9 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.close, color: Colors.red, size: 20),
-            onPressed: () {
-              setState(() {
+            onPressed: () => setState(() {
                 _guestList.remove(guest);
-              });
-            },
+              }),
           ),
         ],
       ),

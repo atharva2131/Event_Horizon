@@ -46,6 +46,18 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     _loadUserProfile();
   }
 
+  // Get initials from name
+  String getInitials(String name) {
+    if (name.isEmpty) return "?";
+    
+    List<String> nameParts = name.split(' ');
+    if (nameParts.length > 1) {
+      return nameParts[0][0].toUpperCase() + nameParts[1][0].toUpperCase();
+    } else {
+      return name[0].toUpperCase();
+    }
+  }
+
   Future<void> _loadUserProfile() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -173,6 +185,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final String userInitials = getInitials(_nameController.text);
+    final bool hasProfileImage = profilePicture.isNotEmpty && profilePicture != "null";
+    final bool hasImageFile = _imageFile != null;
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -222,9 +238,17 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                                     child: CircleAvatar(
                                       radius: 60,
                                       backgroundColor: lightPurple,
-                                      backgroundImage: _imageFile != null 
+                                      backgroundImage: hasImageFile 
                                         ? FileImage(_imageFile!) as ImageProvider
-                                        : NetworkImage(profilePicture),
+                                        : (hasProfileImage ? NetworkImage(profilePicture) : null),
+                                      child: (!hasImageFile && !hasProfileImage) ? Text(
+                                        userInitials,
+                                        style: const TextStyle(
+                                          fontSize: 36,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ) : null,
                                     ),
                                   ),
                                   Positioned(
@@ -470,5 +494,3 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     );
   }
 }
-
-

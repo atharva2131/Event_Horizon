@@ -6,10 +6,15 @@ import 'package:eventhorizon/screens/vendor_bookings_screen.dart' as vendorBooki
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+<<<<<<< HEAD
 import 'package:eventhorizon/screens/vendor_pending_reviews_screen.dart';
 import 'package:eventhorizon/screens/vendor_revenue_screen.dart';
 import 'package:eventhorizon/screens/notification_helper.dart';
 import 'package:eventhorizon/screens/notification_service.dart';
+=======
+import 'package:path/path.dart' as path;
+import 'package:http_parser/http_parser.dart';
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
 
 class VendorHomeScreen extends StatefulWidget {
   const VendorHomeScreen({super.key});
@@ -23,29 +28,71 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
   final Color primaryColor = Colors.deepPurple;
   final Color primaryLightColor = Colors.deepPurple[100]!;
   
+  // Base API URL - change this to your actual API URL
+  final String baseApiUrl = 'http://192.168.29.168:3000/api';
+  
+  // State variables
   List<Map<String, dynamic>> services = [];
+  List<Map<String, dynamic>> portfolioItems = [];
   Map<String, dynamic> vendorProfile = {};
   bool isLoading = true;
+  bool isServicesLoading = false;
+  bool isPortfolioLoading = false;
   String? errorMessage;
 
+<<<<<<< HEAD
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
 
   List<String> portfolioImages = [];
+=======
+  // Controllers for form inputs
+  final TextEditingController _serviceNameController = TextEditingController();
+  final TextEditingController _serviceDescController = TextEditingController();
+  final TextEditingController _serviceCategoryController = TextEditingController();
+  final TextEditingController _servicePriceController = TextEditingController();
+  
+  final TextEditingController _portfolioTitleController = TextEditingController();
+  final TextEditingController _portfolioDescController = TextEditingController();
+  final TextEditingController _portfolioUrlController = TextEditingController();
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
 
   final ImagePicker _picker = ImagePicker();
 
   bool _isEditing = false;
+  String? _selectedServiceId;
+  File? _selectedImage;
+
+  // Valid service categories from your Mongoose schema
+  final List<String> validCategories = [
+    "Photography",
+    "Videography",
+    "Catering",
+    "Venue",
+    "Music",
+    "Decoration",
+    "Transportation",
+    "Accommodation",
+    "Beauty",
+    "Invitation",
+    "Cake",
+    "Flowers",
+    "Lighting",
+    "Entertainment",
+    "Other"
+  ];
 
   @override
   void initState() {
     super.initState();
     _loadVendorProfile();
     _loadServices();
+    _loadPortfolio();
   }
 
+  // Load vendor profile from API
   Future<void> _loadVendorProfile() async {
     setState(() => isLoading = true);
     try {
@@ -61,7 +108,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
       }
       
       final response = await http.get(
-        Uri.parse('http://192.168.29.168:3000/api/auth/me'),
+        Uri.parse('$baseApiUrl/auth/me'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -88,17 +135,23 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
     }
   }
 
+  // Load vendor services from API
   Future<void> _loadServices() async {
+    setState(() => isServicesLoading = true);
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
       
       if (token == null) {
+        setState(() {
+          services = _getMockServices();
+          isServicesLoading = false;
+        });
         return;
       }
       
       final response = await http.get(
-        Uri.parse('http://192.168.29.168:3000/api/vendor/services'),
+        Uri.parse('$baseApiUrl/vendors/services'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -107,32 +160,165 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
+        final List<dynamic> servicesData = responseData['services'] ?? [];
+        
         setState(() {
-          services = List<Map<String, dynamic>>.from(responseData['services'] ?? []);
+          services = servicesData.map((service) {
+            // Transform API data to match our UI structure
+            return {
+              "id": service['_id'],
+              "title": service['name'],
+              "description": service['description'],
+              "category": service['category'],
+              "price": _formatPricing(service['pricing']),
+              "isActive": service['isActive'] ?? false,
+              "rating": service['averageRating'] ?? 0.0,
+              "reviews": service['totalReviews'] ?? 0,
+              "pricing": service['pricing'] ?? [],
+            };
+          }).toList();
+          isServicesLoading = false;
         });
       } else {
+        print('Error loading services: ${response.statusCode}');
+        print('Response body: ${response.body}');
         // If API fails, use mock data
         setState(() {
-          services = [
-            {"title": "Wedding Photography", "price": "\$299/hr", "isActive": true},
-            {"title": "Corporate Events", "price": "\$199/hr", "isActive": true},
-            {"title": "Portrait Sessions", "price": "\$149/hr", "isActive": false},
-          ];
+          services = _getMockServices();
+          isServicesLoading = false;
         });
       }
     } catch (e) {
       print('Error loading services: $e');
       // Use mock data on error
       setState(() {
-        services = [
-          {"title": "Wedding Photography", "price": "\$299/hr", "isActive": true},
-          {"title": "Corporate Events", "price": "\$199/hr", "isActive": true},
-          {"title": "Portrait Sessions", "price": "\$149/hr", "isActive": false},
-        ];
+        services = _getMockServices();
+        isServicesLoading = false;
+      });
+    }
+  }
+  
+  // Load vendor portfolio from API
+  Future<void> _loadPortfolio() async {
+    setState(() => isPortfolioLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      
+      if (token == null) {
+        setState(() {
+          portfolioItems = [];
+          isPortfolioLoading = false;
+        });
+        return;
+      }
+      
+      final response = await http.get(
+        Uri.parse('$baseApiUrl/vendors/portfolio'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final List<dynamic> portfolioData = responseData['portfolio'] ?? [];
+        
+        setState(() {
+          portfolioItems = portfolioData.map((item) {
+            // Fix the mediaUrl to include the full base URL if it's a relative path
+            String mediaUrl = item['mediaUrl'];
+            if (mediaUrl.startsWith('/uploads/')) {
+              mediaUrl = 'http://192.168.29.168:3000$mediaUrl';
+            }
+            
+            return {
+              "id": item['_id'],
+              "title": item['title'],
+              "description": item['description'] ?? "",
+              "mediaUrl": mediaUrl,
+              "mediaType": item['mediaType'] ?? "image",
+              "serviceId": item['serviceId'],
+              "featured": item['featured'] ?? false,
+            };
+          }).toList();
+          isPortfolioLoading = false;
+        });
+      } else {
+        print('Error loading portfolio: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        setState(() {
+          portfolioItems = [];
+          isPortfolioLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading portfolio: $e');
+      setState(() {
+        portfolioItems = [];
+        isPortfolioLoading = false;
       });
     }
   }
 
+  // Format pricing from API to display in UI
+  String _formatPricing(List<dynamic>? pricing) {
+    if (pricing == null || pricing.isEmpty) {
+      return "\$0";
+    }
+    
+    // Get the first pricing package
+    final firstPackage = pricing[0];
+    return "\$${firstPackage['price']}";
+  }
+
+  // Get mock services for fallback
+  List<Map<String, dynamic>> _getMockServices() {
+    return [
+      {
+        "id": "mock1",
+        "title": "Wedding Photography",
+        "description": "Professional wedding photography services",
+        "category": "Photography",
+        "price": "\$299/hr",
+        "isActive": true,
+        "rating": 4.8,
+        "reviews": 24,
+        "pricing": [
+          {"name": "Basic", "price": 299, "description": "Basic package"}
+        ],
+      },
+      {
+        "id": "mock2",
+        "title": "Corporate Events",
+        "description": "Professional corporate event services",
+        "category": "Photography",
+        "price": "\$199/hr",
+        "isActive": true,
+        "rating": 4.5,
+        "reviews": 18,
+        "pricing": [
+          {"name": "Standard", "price": 199, "description": "Standard package"}
+        ],
+      },
+      {
+        "id": "mock3",
+        "title": "Portrait Sessions",
+        "description": "Professional portrait photography",
+        "category": "Photography",
+        "price": "\$149/hr",
+        "isActive": false,
+        "rating": 4.7,
+        "reviews": 15,
+        "pricing": [
+          {"name": "Basic", "price": 149, "description": "Basic package"}
+        ],
+      },
+    ];
+  }
+
+  // Toggle service active status
   void _toggleServiceStatus(int index) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -149,7 +335,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
       final newStatus = !services[index]["isActive"];
       
       final response = await http.put(
-        Uri.parse('http://192.168.29.168:3000/api/vendor/services/$serviceId/status'),
+        Uri.parse('$baseApiUrl/vendors/services/$serviceId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -163,6 +349,10 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
         setState(() {
           services[index]["isActive"] = newStatus;
         });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Service ${newStatus ? 'activated' : 'deactivated'} successfully')),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to update service status')),
@@ -177,10 +367,26 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
     }
   }
 
+  // Add a new service
   void _addNewService() async {
-    if (_titleController.text.isEmpty || _priceController.text.isEmpty) {
+    if (_serviceNameController.text.isEmpty || 
+        _serviceDescController.text.isEmpty || 
+        _serviceCategoryController.text.isEmpty || 
+        _servicePriceController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter both title and price")),
+        const SnackBar(content: Text("Please fill in all fields")),
+      );
+      return;
+    }
+
+    // Validate category against the allowed list
+    String category = _serviceCategoryController.text.trim();
+    // Capitalize first letter to match enum format
+    category = category[0].toUpperCase() + category.substring(1).toLowerCase();
+    
+    if (!validCategories.contains(category)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Invalid category. Please choose from: ${validCategories.join(', ')}")),
       );
       return;
     }
@@ -196,34 +402,67 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
         return;
       }
       
+      // Parse price to ensure it's a number
+      final priceText = _servicePriceController.text.replaceAll(RegExp(r'[^\d.]'), '');
+      final price = double.tryParse(priceText) ?? 0;
+      
+      // Fixed request format to match backend expectations
       final response = await http.post(
-        Uri.parse('http://192.168.29.168:3000/api/vendor/services'),
+        Uri.parse('$baseApiUrl/vendors/services'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
-          'title': _titleController.text,
-          'price': _priceController.text,
-          'isActive': false,
+          'name': _serviceNameController.text,
+          'description': _serviceDescController.text,
+          'category': category, // Use validated category
+          'pricing': [
+            {
+              'name': 'Standard',
+              'price': price,
+              'description': 'Standard package'
+            }
+          ],
+          'tags': [],
+          'isActive': true
         }),
       );
 
       if (response.statusCode == 201) {
         final responseData = json.decode(response.body);
+        final newService = responseData['service'];
+        
         setState(() {
-          services.add(responseData['service'] ?? {
-            "title": _titleController.text,
-            "price": _priceController.text,
-            "isActive": false,
+          services.add({
+            "id": newService['_id'],
+            "title": newService['name'],
+            "description": newService['description'],
+            "category": newService['category'],
+            "price": "\$${price.toString()}",
+            "isActive": newService['isActive'] ?? true,
+            "rating": 0.0,
+            "reviews": 0,
+            "pricing": newService['pricing'] ?? [],
           });
         });
-        _titleController.clear();
-        _priceController.clear();
+        
+        _serviceNameController.clear();
+        _serviceDescController.clear();
+        _serviceCategoryController.clear();
+        _servicePriceController.clear();
+        
         Navigator.pop(context); // Close the modal
-      } else {
+        
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to add service")),
+          const SnackBar(content: Text("Service added successfully")),
+        );
+      } else {
+        print('Failed to add service: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to add service: ${response.statusCode}")),
         );
       }
     } catch (e) {
@@ -231,20 +470,39 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
       // Add service optimistically
       setState(() {
         services.add({
-          "title": _titleController.text,
-          "price": _priceController.text,
-          "isActive": false,
+          "id": "temp_${DateTime.now().millisecondsSinceEpoch}",
+          "title": _serviceNameController.text,
+          "description": _serviceDescController.text,
+          "category": _serviceCategoryController.text,
+          "price": "\$${_servicePriceController.text}",
+          "isActive": true,
+          "rating": 0.0,
+          "reviews": 0,
+          "pricing": [
+            {
+              "name": "Standard",
+              "price": double.tryParse(_servicePriceController.text.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0,
+              "description": "Standard package"
+            }
+          ],
         });
       });
-      _titleController.clear();
-      _priceController.clear();
+      
+      _serviceNameController.clear();
+      _serviceDescController.clear();
+      _serviceCategoryController.clear();
+      _servicePriceController.clear();
+      
       Navigator.pop(context); // Close the modal
     }
   }
 
+  // Show modal to add a new service
   void _showAddServiceModal() {
-    _titleController.clear();
-    _priceController.clear();
+    _serviceNameController.clear();
+    _serviceDescController.clear();
+    _serviceCategoryController.clear();
+    _servicePriceController.clear();
 
     showDialog(
       context: context,
@@ -252,39 +510,83 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text("Add New Service", style: TextStyle(fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _titleController,
-                decoration: InputDecoration(
-                  labelText: "Service Title",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: primaryColor),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _serviceNameController,
+                  decoration: InputDecoration(
+                    labelText: "Service Name",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: primaryColor),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _priceController,
-                keyboardType: TextInputType.text,
-                decoration: InputDecoration(
-                  labelText: "Service Price",
-                  hintText: "e.g. 199/hr",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: primaryColor),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _serviceDescController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: "Description",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: primaryColor),
+                    ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                // Replace TextField with DropdownButtonFormField for category
+                DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: "Category",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: primaryColor),
+                    ),
+                  ),
+                  items: validCategories.map((String category) {
+                    return DropdownMenuItem<String>(
+                      value: category,
+                      child: Text(category),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      _serviceCategoryController.text = newValue;
+                    }
+                  },
+                  hint: const Text("Select a category"),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _servicePriceController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: "Price",
+                    hintText: "e.g. 199",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: primaryColor),
+                    ),
+                    prefixText: "\$ ",
+                  ),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -307,9 +609,13 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
     );
   }
 
+  // Show modal to edit an existing service
   void _showEditServiceModal(int index) {
-    _titleController.text = services[index]["title"];
-    _priceController.text = services[index]["price"];
+    final service = services[index];
+    _serviceNameController.text = service["title"];
+    _serviceDescController.text = service["description"] ?? "";
+    _serviceCategoryController.text = service["category"] ?? "";
+    _servicePriceController.text = service["price"].toString().replaceAll(RegExp(r'[^\d.]'), '');
 
     showDialog(
       context: context,
@@ -317,126 +623,14 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text("Edit Service", style: TextStyle(fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _titleController,
-                decoration: InputDecoration(
-                  labelText: "Service Title",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: primaryColor),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _priceController,
-                decoration: InputDecoration(
-                  labelText: "Service Price",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: primaryColor),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                try {
-                  final prefs = await SharedPreferences.getInstance();
-                  final token = prefs.getString('token');
-                  
-                  if (token == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Authentication token not found. Please login again.')),
-                    );
-                    return;
-                  }
-                  
-                  final serviceId = services[index]['id'];
-                  
-                  final response = await http.put(
-                    Uri.parse('http://192.168.29.168:3000/api/vendor/services/$serviceId'),
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': 'Bearer $token',
-                    },
-                    body: jsonEncode({
-                      'title': _titleController.text,
-                      'price': _priceController.text,
-                    }),
-                  );
-
-                  if (response.statusCode == 200) {
-                    setState(() {
-                      services[index]["title"] = _titleController.text;
-                      services[index]["price"] = _priceController.text;
-                    });
-                    Navigator.pop(context);
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Failed to update service")),
-                    );
-                  }
-                } catch (e) {
-                  print('Error updating service: $e');
-                  // Update optimistically
-                  setState(() {
-                    services[index]["title"] = _titleController.text;
-                    services[index]["price"] = _priceController.text;
-                  });
-                  Navigator.pop(context);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              ),
-              child: const Text("Save Changes"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // New method to show vendor info edit modal
-  void _showVendorInfoModal() {
-    _descriptionController.text = vendorProfile['description'] ?? '';
-    _addressController.text = vendorProfile['address'] ?? '';
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text("Vendor Information", style: TextStyle(fontWeight: FontWeight.bold)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-                  controller: _descriptionController,
-                  maxLines: 4,
+                  controller: _serviceNameController,
                   decoration: InputDecoration(
-                    labelText: "Business Description",
-                    hintText: "Tell customers about your business...",
+                    labelText: "Service Name",
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     filled: true,
                     fillColor: Colors.grey[50],
@@ -448,10 +642,10 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller: _addressController,
+                  controller: _serviceDescController,
+                  maxLines: 3,
                   decoration: InputDecoration(
-                    labelText: "Business Address",
-                    hintText: "Enter your business location",
+                    labelText: "Description",
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     filled: true,
                     fillColor: Colors.grey[50],
@@ -459,6 +653,49 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: primaryColor),
                     ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Replace TextField with DropdownButtonFormField for category
+                DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: "Category",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: primaryColor),
+                    ),
+                  ),
+                  value: validCategories.contains(service["category"]) ? service["category"] : null,
+                  items: validCategories.map((String category) {
+                    return DropdownMenuItem<String>(
+                      value: category,
+                      child: Text(category),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      _serviceCategoryController.text = newValue;
+                    }
+                  },
+                  hint: const Text("Select a category"),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _servicePriceController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: "Price",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: primaryColor),
+                    ),
+                    prefixText: "\$ ",
                   ),
                 ),
               ],
@@ -482,13 +719,211 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                     return;
                   }
                   
+                  final serviceId = services[index]['id'];
+                  final price = double.tryParse(_servicePriceController.text.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0;
+                  
+                  // Validate category
+                  String category = _serviceCategoryController.text;
+                  if (!validCategories.contains(category)) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Invalid category. Please choose from: ${validCategories.join(', ')}")),
+                    );
+                    return;
+                  }
+                  
                   final response = await http.put(
-                    Uri.parse('http://192.168.29.168:3000/api/vendor/profile'),
+                    Uri.parse('$baseApiUrl/vendors/services/$serviceId'),
                     headers: {
                       'Content-Type': 'application/json',
                       'Authorization': 'Bearer $token',
                     },
                     body: jsonEncode({
+                      'name': _serviceNameController.text,
+                      'description': _serviceDescController.text,
+                      'category': category,
+                      'pricing': [
+                        {
+                          'name': 'Standard',
+                          'price': price,
+                          'description': 'Standard package for ${_serviceNameController.text}'
+                        }
+                      ],
+                    }),
+                  );
+
+                  if (response.statusCode == 200) {
+                    setState(() {
+                      services[index]["title"] = _serviceNameController.text;
+                      services[index]["description"] = _serviceDescController.text;
+                      services[index]["category"] = category;
+                      services[index]["price"] = "\$${price.toString()}";
+                    });
+                    Navigator.pop(context);
+                    
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Service updated successfully")),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Failed to update service")),
+                    );
+                  }
+                } catch (e) {
+                  print('Error updating service: $e');
+                  // Update optimistically
+                  setState(() {
+                    services[index]["title"] = _serviceNameController.text;
+                    services[index]["description"] = _serviceDescController.text;
+                    services[index]["category"] = _serviceCategoryController.text;
+                    services[index]["price"] = "\$${_servicePriceController.text}";
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: const Text("Save Changes"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+<<<<<<< HEAD
+  // New method to show vendor info edit modal
+  void _showVendorInfoModal() {
+    _descriptionController.text = vendorProfile['description'] ?? '';
+    _addressController.text = vendorProfile['address'] ?? '';
+=======
+  // Show modal to add a new portfolio item
+  void _showAddPortfolioModal(String? serviceId, String serviceName) {
+    _portfolioTitleController.clear();
+    _portfolioDescController.clear();
+    _portfolioUrlController.clear();
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+<<<<<<< HEAD
+          title: const Text("Vendor Information", style: TextStyle(fontWeight: FontWeight.bold)),
+=======
+          title: Text("Add Portfolio Item for $serviceName", 
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+<<<<<<< HEAD
+                  controller: _descriptionController,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    labelText: "Business Description",
+                    hintText: "Tell customers about your business...",
+=======
+                  controller: _portfolioTitleController,
+                  decoration: InputDecoration(
+                    labelText: "Title",
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: primaryColor),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+<<<<<<< HEAD
+                  controller: _addressController,
+                  decoration: InputDecoration(
+                    labelText: "Business Address",
+                    hintText: "Enter your business location",
+=======
+                  controller: _portfolioDescController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: "Description",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: primaryColor),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _portfolioUrlController,
+                  decoration: InputDecoration(
+                    labelText: "Media URL",
+                    hintText: "https://example.com/image.jpg",
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: primaryColor),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+<<<<<<< HEAD
+=======
+                if (_portfolioTitleController.text.isEmpty || _portfolioUrlController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Title and Media URL are required")),
+                  );
+                  return;
+                }
+                
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
+                try {
+                  final prefs = await SharedPreferences.getInstance();
+                  final token = prefs.getString('token');
+                  
+                  if (token == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Authentication token not found. Please login again.')),
+                    );
+                    return;
+                  }
+                  
+<<<<<<< HEAD
+                  final response = await http.put(
+                    Uri.parse('http://192.168.29.168:3000/api/vendor/profile'),
+=======
+                  final response = await http.post(
+                    Uri.parse('$baseApiUrl/vendors/portfolio'),
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': 'Bearer $token',
+                    },
+                    body: jsonEncode({
+<<<<<<< HEAD
                       'description': _descriptionController.text,
                       'address': _addressController.text,
                     }),
@@ -519,6 +954,72 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Vendor information updated')),
                   );
+=======
+                      'title': _portfolioTitleController.text,
+                      'description': _portfolioDescController.text,
+                      'mediaUrl': _portfolioUrlController.text,
+                      'mediaType': 'image',
+                      'serviceId': serviceId,
+                    }),
+                  );
+
+                  if (response.statusCode == 201) {
+                    final responseData = json.decode(response.body);
+                    final newItem = responseData['portfolioItem'];
+                    
+                    // Fix the mediaUrl to include the full base URL if it's a relative path
+                    String mediaUrl = newItem['mediaUrl'];
+                    if (mediaUrl.startsWith('/uploads/')) {
+                      mediaUrl = 'http://192.168.29.168:3000$mediaUrl';
+                    }
+                    
+                    setState(() {
+                      portfolioItems.add({
+                        "id": newItem['_id'],
+                        "title": newItem['title'],
+                        "description": newItem['description'] ?? "",
+                        "mediaUrl": mediaUrl,
+                        "mediaType": newItem['mediaType'] ?? "image",
+                        "serviceId": newItem['serviceId'],
+                        "featured": newItem['featured'] ?? false,
+                      });
+                    });
+                    
+                    _portfolioTitleController.clear();
+                    _portfolioDescController.clear();
+                    _portfolioUrlController.clear();
+                    
+                    Navigator.pop(context);
+                    
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Portfolio item added successfully")),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Failed to add portfolio item: ${response.statusCode}")),
+                    );
+                  }
+                } catch (e) {
+                  print('Error adding portfolio item: $e');
+                  // Add item optimistically
+                  setState(() {
+                    portfolioItems.add({
+                      "id": "temp_${DateTime.now().millisecondsSinceEpoch}",
+                      "title": _portfolioTitleController.text,
+                      "description": _portfolioDescController.text,
+                      "mediaUrl": _portfolioUrlController.text,
+                      "mediaType": "image",
+                      "serviceId": serviceId,
+                      "featured": false,
+                    });
+                  });
+                  
+                  _portfolioTitleController.clear();
+                  _portfolioDescController.clear();
+                  _portfolioUrlController.clear();
+                  
+                  Navigator.pop(context);
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -527,7 +1028,11 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
+<<<<<<< HEAD
               child: const Text("Save Changes"),
+=======
+              child: const Text("Add Item"),
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
             ),
           ],
         );
@@ -535,36 +1040,188 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
     );
   }
 
+<<<<<<< HEAD
   Future<void> _pickImage() async {
+=======
+  // Pick image from gallery and upload to portfolio
+  Future<void> _pickImage(String? serviceId, String serviceName) async {
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final token = prefs.getString('token');
-        
-        if (token == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Authentication token not found. Please login again.')),
+      setState(() {
+        _selectedImage = File(image.path);
+      });
+      
+      // Show a dialog to get title and description
+      _portfolioTitleController.text = "New Portfolio Item";
+      _portfolioDescController.text = "";
+      
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text("Add to $serviceName Portfolio", style: const TextStyle(fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _portfolioTitleController,
+                  decoration: InputDecoration(
+                    labelText: "Title",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: primaryColor),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _portfolioDescController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: "Description",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: primaryColor),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  try {
+                    final prefs = await SharedPreferences.getInstance();
+                    final token = prefs.getString('token');
+                    
+                    if (token == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Authentication token not found. Please login again.')),
+                      );
+                      return;
+                    }
+                    
+                    // Create multipart request for file upload
+                    var request = http.MultipartRequest(
+                      'POST',
+                      Uri.parse('$baseApiUrl/vendors/portfolio'),
+                    );
+                    
+                    // Add authorization header
+                    request.headers.addAll({
+                      'Authorization': 'Bearer $token',
+                    });
+                    
+                    // Add text fields
+                    request.fields['title'] = _portfolioTitleController.text;
+                    request.fields['description'] = _portfolioDescController.text;
+                    if (serviceId != null) {
+                      request.fields['serviceId'] = serviceId;
+                    }
+                    
+                    // Determine file type
+                    final ext = path.extension(_selectedImage!.path).toLowerCase();
+                    final contentType = ext == '.jpg' || ext == '.jpeg' 
+                        ? 'image/jpeg' 
+                        : ext == '.png' 
+                            ? 'image/png' 
+                            : ext == '.gif' 
+                                ? 'image/gif' 
+                                : 'application/octet-stream';
+                    
+                    // Add file
+                    request.files.add(
+                      await http.MultipartFile.fromPath(
+                        'media', // This must match the field name expected by your server
+                        _selectedImage!.path,
+                        contentType: MediaType.parse(contentType),
+                      ),
+                    );
+                    
+                    // Send request
+                    var streamedResponse = await request.send();
+                    var response = await http.Response.fromStream(streamedResponse);
+                    
+                    if (response.statusCode == 201) {
+                      final responseData = json.decode(response.body);
+                      final newItem = responseData['portfolioItem'];
+                      
+                      // Fix the mediaUrl to include the full base URL if it's a relative path
+                      String mediaUrl = newItem['mediaUrl'];
+                      if (mediaUrl.startsWith('/uploads/')) {
+                        mediaUrl = 'http://192.168.29.168:3000$mediaUrl';
+                      }
+                      
+                      setState(() {
+                        portfolioItems.add({
+                          "id": newItem['_id'],
+                          "title": newItem['title'],
+                          "description": newItem['description'] ?? "",
+                          "mediaUrl": mediaUrl,
+                          "mediaType": newItem['mediaType'] ?? "image",
+                          "serviceId": newItem['serviceId'],
+                          "featured": newItem['featured'] ?? false,
+                        });
+                      });
+                      
+                      _portfolioTitleController.clear();
+                      _portfolioDescController.clear();
+                      _selectedImage = null;
+                      
+                      Navigator.pop(context);
+                      
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Image added to portfolio successfully')),
+                      );
+                    } else {
+                      print('Failed to upload image: ${response.statusCode}');
+                      print('Response body: ${response.body}');
+                      
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to upload image: ${response.statusCode}')),
+                      );
+                    }
+                  } catch (e) {
+                    print('Error adding image to portfolio: $e');
+                    // Add image optimistically
+                    setState(() {
+                      portfolioItems.add({
+                        "id": "local_${DateTime.now().millisecondsSinceEpoch}",
+                        "title": _portfolioTitleController.text,
+                        "description": _portfolioDescController.text,
+                        "mediaUrl": _selectedImage!.path,
+                        "mediaType": "image",
+                        "serviceId": serviceId,
+                        "isLocal": true,
+                      });
+                    });
+                    Navigator.pop(context);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
+                child: const Text("Add to Portfolio"),
+              ),
+            ],
           );
-          return;
-        }
-        
-        // Here you would typically upload the image to your server
-        // For now, we'll just add it to the local list
-        setState(() {
-          portfolioImages.add(image.path);
-        });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Image added to portfolio')),
-        );
-      } catch (e) {
-        print('Error adding image to portfolio: $e');
-        // Add image optimistically
-        setState(() {
-          portfolioImages.add(image.path);
-        });
-      }
+        },
+      );
     }
   }
 
@@ -615,6 +1272,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                     ),
                   ),
                 )
+<<<<<<< HEAD
               : SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -632,6 +1290,28 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                       _buildContactInfo(),
                       const SizedBox(height: 20),
                     ],
+=======
+              : RefreshIndicator(
+                  onRefresh: () async {
+                    await _loadVendorProfile();
+                    await _loadServices();
+                    await _loadPortfolio();
+                  },
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        _buildProfileCard(),
+                        const SizedBox(height: 20),
+                        _buildStatsGrid(context),
+                        const SizedBox(height: 20),
+                        _buildServicesSection(),
+                        const SizedBox(height: 20),
+                        _buildContactInfo(),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
                   ),
                 ),
       floatingActionButton: FloatingActionButton(
@@ -975,93 +1655,410 @@ Widget _buildStatsGrid(BuildContext context) {
   }
 
   Widget _buildServicesSection() {
+    return Column(
+      children: [
+        if (isServicesLoading)
+          Center(child: CircularProgressIndicator(color: primaryColor))
+        else if (services.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(20),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.grey[100],
+            ),
+            child: Text(
+              "No services added yet",
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          )
+        else
+          ...List.generate(services.length, (index) {
+            return _buildServiceWithPortfolio(index);
+          }),
+        const SizedBox(height: 16),
+        GestureDetector(
+          onTap: _showAddServiceModal,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.grey[50],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.add_circle_outline, color: primaryColor),
+                const SizedBox(width: 8),
+                Text(
+                  "Add New Service",
+                  style: TextStyle(color: primaryColor, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildServiceWithPortfolio(int index) {
+    final service = services[index];
+    final serviceId = service["id"];
+    final servicePortfolio = portfolioItems.where((item) => item["serviceId"] == serviceId).toList();
+    
     return Container(
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: _boxDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionHeader("Services", _isEditing ? "Done" : "Edit"),
-          const SizedBox(height: 16),
-          if (_isEditing)
-            ...List.generate(services.length, (index) {
-              return _buildEditableServiceItem(index);
-            }),
-          if (!_isEditing)
-            ...List.generate(services.length, (index) {
-              return _buildServiceItem(index);
-            }),
-          const SizedBox(height: 16),
-          if (!_isEditing)
-            GestureDetector(
-              onTap: _showAddServiceModal,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(12),
-                  color: Colors.grey[50],
+          // Service header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: primaryColor.withOpacity(0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        service["title"],
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: primaryColor,
+                        ),
+                      ),
+                      if (service["category"] != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              service["category"],
+                              style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Switch(
+                  value: service["isActive"],
+                  activeColor: primaryColor,
+                  onChanged: (value) {
+                    _toggleServiceStatus(index);
+                  },
+                ),
+              ],
+            ),
+          ),
+          
+          // Service details
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (service["description"] != null && service["description"].toString().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      service["description"],
+                      style: TextStyle(color: Colors.grey[700]),
+                    ),
+                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(Icons.add_circle_outline, color: primaryColor),
-                    const SizedBox(width: 8),
                     Text(
-                      "Add New Service",
-                      style: TextStyle(color: primaryColor, fontWeight: FontWeight.w500),
+                      "Price: ${service["price"]}",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.edit, color: primaryColor),
+                          onPressed: () {
+                            _showEditServiceModal(index);
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () async {
+                            try {
+                              final prefs = await SharedPreferences.getInstance();
+                              final token = prefs.getString('token');
+                              
+                              if (token == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Authentication token not found. Please login again.')),
+                                );
+                                return;
+                              }
+                              
+                              final serviceId = services[index]['id'];
+                              
+                              final response = await http.delete(
+                                Uri.parse('$baseApiUrl/vendors/services/$serviceId'),
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'Authorization': 'Bearer $token',
+                                },
+                              );
+
+                              if (response.statusCode == 200) {
+                                setState(() {
+                                  services.removeAt(index);
+                                });
+                                
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("Service deleted successfully")),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("Failed to delete service")),
+                                );
+                              }
+                            } catch (e) {
+                              print('Error deleting service: $e');
+                              // Delete optimistically
+                              setState(() {
+                                services.removeAt(index);
+                              });
+                            }
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ),
+              ],
             ),
+          ),
+          
+          // Portfolio section
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Portfolio",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: primaryColor,
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => _showAddPortfolioModal(serviceId, service["title"]),
+                      icon: Icon(Icons.add_link, size: 18, color: primaryColor),
+                      label: Text("Add URL", style: TextStyle(color: primaryColor)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () => _pickImage(serviceId, service["title"]),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.grey[50],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_photo_alternate_outlined, color: primaryColor),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Add Photo",
+                          style: TextStyle(color: primaryColor),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (isPortfolioLoading)
+                  Center(child: CircularProgressIndicator(color: primaryColor))
+                else if (servicePortfolio.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.grey[100],
+                    ),
+                    child: Text(
+                      "No portfolio items for this service",
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  )
+                else
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      childAspectRatio: 0.8,
+                    ),
+                    itemCount: servicePortfolio.length,
+                    itemBuilder: (context, idx) {
+                      final item = servicePortfolio[idx];
+                      return _buildPortfolioItem(item);
+                    },
+                  ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildEditableServiceItem(int index) {
-    final service = services[index];
+  Widget _buildPortfolioItem(Map<String, dynamic> item) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: Colors.grey[50],
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  service["title"],
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  service["price"],
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                ),
-              ],
-            ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
           ),
-          Row(
-            children: [
-              IconButton(
-                icon: Icon(Icons.edit, color: primaryColor),
-                onPressed: () {
-                  _showEditServiceModal(index);
-                },
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Image
+            item['isLocal'] == true
+                ? Image.file(
+                    File(item['mediaUrl']),
+                    fit: BoxFit.cover,
+                  )
+                : Image.network(
+                    item['mediaUrl'],
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                              : null,
+                          color: primaryColor,
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      print('Error loading image: $error');
+                      return Container(
+                        color: Colors.grey[300],
+                        child: const Center(
+                          child: Icon(Icons.error_outline, color: Colors.red),
+                        ),
+                      );
+                    },
+                  ),
+            
+            // Gradient overlay
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.7),
+                    ],
+                    stops: const [0.6, 1.0],
+                  ),
+                ),
               ),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () async {
+            ),
+            
+            // Title and description
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item['title'],
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (item['description'] != null && item['description'].toString().isNotEmpty)
+                      Text(
+                        item['description'],
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Delete button
+            Positioned(
+              top: 5,
+              right: 5,
+              child: GestureDetector(
+                onTap: () async {
                   try {
+                    if (item['isLocal'] == true) {
+                      setState(() {
+                        portfolioItems.removeWhere((element) => element['id'] == item['id']);
+                      });
+                      return;
+                    }
+                    
                     final prefs = await SharedPreferences.getInstance();
                     final token = prefs.getString('token');
                     
@@ -1072,10 +2069,10 @@ Widget _buildStatsGrid(BuildContext context) {
                       return;
                     }
                     
-                    final serviceId = services[index]['id'];
+                    final itemId = item['id'];
                     
                     final response = await http.delete(
-                      Uri.parse('http://192.168.29.168:3000/api/vendor/services/$serviceId'),
+                      Uri.parse('$baseApiUrl/vendors/portfolio/$itemId'),
                       headers: {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer $token',
@@ -1084,135 +2081,41 @@ Widget _buildStatsGrid(BuildContext context) {
 
                     if (response.statusCode == 200) {
                       setState(() {
-                        services.removeAt(index);
+                        portfolioItems.removeWhere((element) => element['id'] == itemId);
                       });
+                      
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Portfolio item deleted successfully")),
+                      );
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Failed to delete service")),
+                        const SnackBar(content: Text("Failed to delete portfolio item")),
                       );
                     }
                   } catch (e) {
-                    print('Error deleting service: $e');
+                    print('Error deleting portfolio item: $e');
                     // Delete optimistically
                     setState(() {
-                      services.removeAt(index);
+                      portfolioItems.removeWhere((element) => element['id'] == item['id']);
                     });
                   }
                 },
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildServiceItem(int index) {
-    final service = services[index];
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.grey[50],
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  service["title"],
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  service["price"],
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: service["isActive"],
-            activeColor: primaryColor,
-            onChanged: (value) {
-              _toggleServiceStatus(index);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPortfolioSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: _boxDecoration(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader("Portfolio", ""),
-          const SizedBox(height: 16),
-          GestureDetector(
-            onTap: _pickImage,
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[300]!),
-                borderRadius: BorderRadius.circular(12),
-                color: Colors.grey[50],
-              ),
-              child: Column(
-                children: [
-                  Icon(Icons.add_photo_alternate_outlined, size: 40, color: primaryColor),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Add New Photo",
-                    style: TextStyle(color: primaryColor, fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          portfolioImages.isEmpty
-              ? Container(
-                  padding: const EdgeInsets.all(20),
-                  alignment: Alignment.center,
+                child: Container(
+                  padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.grey[100],
+                    color: Colors.black.withOpacity(0.5),
+                    shape: BoxShape.circle,
                   ),
-                  child: Text(
-                    "No photos added yet",
-                    style: TextStyle(color: Colors.grey[600]),
+                  child: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.white,
+                    size: 18,
                   ),
-                )
-              : GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                  ),
-                  itemCount: portfolioImages.length,
-                  itemBuilder: (context, index) {
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.file(
-                        File(portfolioImages[index]),
-                        fit: BoxFit.cover,
-                      ),
-                    );
-                  },
                 ),
-        ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1224,7 +2127,13 @@ Widget _buildStatsGrid(BuildContext context) {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionHeader("Contact Information", ""),
+          const Text(
+            "Contact Information",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
           const SizedBox(height: 16),
           _buildContactItem(Icons.email, vendorProfile['email'] ?? "contact@example.com"),
           const SizedBox(height: 12),
@@ -1256,33 +2165,6 @@ Widget _buildStatsGrid(BuildContext context) {
             maxLines: 2,
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildSectionHeader(String title, String actionText) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-        if (actionText.isNotEmpty)
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _isEditing = !_isEditing;
-              });
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: primaryColor,
-            ),
-            child: Text(actionText),
-          ),
       ],
     );
   }

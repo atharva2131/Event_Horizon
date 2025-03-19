@@ -326,7 +326,11 @@ class EventService {
   Future<Map<String, dynamic>> updateGuestRsvp(String eventId, String email, String rsvpStatus) async {
     try {
       // Send to API
+<<<<<<< HEAD
       final response = await ApiService.put('/events/$eventId/guests/$email/rsvp', {
+=======
+      final response = await ApiService.patch('/events/$eventId/guests/$email/rsvp', {
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
         'rsvpStatus': rsvpStatus
       });
       
@@ -388,6 +392,7 @@ class EventService {
     }
   }
   
+<<<<<<< HEAD
   // FIXED: Upload event cover image
  Future<String> uploadEventImage(String eventId, File imageFile) async {
   try {
@@ -500,6 +505,126 @@ class EventService {
       // If the upload fails, throw an exception with the response body
       throw Exception('Failed to upload image: ${response.body}');
     }
+=======
+  // Upload event image with robust error handling and retry logic
+  // lib/services/event_service.dart - uploadEventImage method update
+
+Future<String> uploadEventImage(String eventId, File imageFile) async {
+  try {
+    // Verify file exists and has content
+    if (!await imageFile.exists()) {
+      throw Exception('Image file does not exist');
+    }
+    
+    final fileLength = await imageFile.length();
+    if (fileLength == 0) {
+      throw Exception('Image file is empty');
+    }
+    
+    // Get token for authorization
+    final token = await ApiService.getToken();
+    if (token == null) {
+      throw Exception('Authentication token not found');
+    }
+    
+    // Create the URL for the upload endpoint
+    final uri = Uri.parse('${ApiService.baseUrl}/events/$eventId/upload-image');
+    
+    // Get file extension and determine content type
+    final fileExtension = extension(imageFile.path).toLowerCase();
+    String contentType;
+    
+    if (fileExtension == '.png') {
+      contentType = 'image/png';
+    } else if (fileExtension == '.gif') {
+      contentType = 'image/gif';
+    } else if (fileExtension == '.jpg' || fileExtension == '.jpeg') {
+      contentType = 'image/jpeg';
+    } else {
+      contentType = 'image/jpeg';
+    }
+    
+    // Implement retry logic
+    int maxRetries = 3;
+    int currentRetry = 0;
+    Exception? lastException;
+    
+    while (currentRetry < maxRetries) {
+      try {
+        // Create a new multipart request
+        var request = http.MultipartRequest('POST', uri);
+        
+        // Add authorization header
+        request.headers['Authorization'] = 'Bearer $token';
+        
+        // Create the multipart file
+        final fileName = basename(imageFile.path);
+        final multipartFile = await http.MultipartFile.fromPath(
+          'eventImage', // Use the correct field name expected by the server
+          imageFile.path,
+          contentType: MediaType(contentType.split('/')[0], contentType.split('/')[1]),
+          filename: fileName,
+        );
+        
+        // Add the file to the request
+        request.files.add(multipartFile);
+        
+        print('Sending image upload request (attempt ${currentRetry + 1}/$maxRetries)');
+        
+        // Send the request
+        final streamedResponse = await request.send();
+        final response = await http.Response.fromStream(streamedResponse);
+        
+        print('Response status: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          // Success! Parse the response
+          final responseData = json.decode(response.body);
+          
+          // Check for different response formats
+          String? imageUrl;
+          
+          if (responseData['eventImage'] != null) {
+            imageUrl = responseData['eventImage'];
+          } else if (responseData['imageUrl'] != null) {
+            imageUrl = responseData['imageUrl'];
+          } else if (responseData['event'] != null && responseData['event']['eventImage'] != null) {
+            imageUrl = responseData['event']['eventImage'];
+          } else if (responseData['image'] != null) {
+            imageUrl = responseData['image'];
+          } else if (responseData['url'] != null) {
+            imageUrl = responseData['url'];
+          } else if (responseData['file'] != null) {
+            imageUrl = responseData['file'];
+          } else if (responseData['path'] != null) {
+            imageUrl = responseData['path'];
+          }
+          
+          if (imageUrl != null) {
+            // Return the image URL
+            return imageUrl;
+          } else {
+            throw Exception('Image URL not found in response');
+          }
+        } else {
+          throw Exception('Server returned status code ${response.statusCode}: ${response.body}');
+        }
+      } catch (e) {
+        lastException = e is Exception ? e : Exception(e.toString());
+        currentRetry++;
+        print('Upload attempt $currentRetry failed: $e');
+        
+        if (currentRetry < maxRetries) {
+          // Wait before retrying with exponential backoff
+          await Future.delayed(Duration(seconds: 2 * currentRetry));
+        }
+      }
+    }
+    
+    // If we get here, all retries failed
+    throw lastException ?? Exception('Failed to upload image after $maxRetries attempts');
+>>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
   } catch (e) {
     print('Error uploading image: $e');
     throw Exception('Error uploading image: $e');

@@ -134,6 +134,27 @@ class ApiService {
     }
   }
   
+  // PATCH request
+  static Future<dynamic> patch(String endpoint, dynamic data) async {
+    final headers = await getHeaders();
+    try {
+      print('PATCH Request: $baseUrl$endpoint');
+      print('PATCH Data: $data');
+      
+      final response = await http.patch(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: headers,
+        body: json.encode(data),
+      );
+      
+      print('PATCH Response Status: ${response.statusCode}');
+      return handleResponse(response);
+    } catch (e) {
+      print('PATCH Request Failed: $e');
+      throw Exception('PATCH request failed: $e');
+    }
+  }
+  
   // DELETE request
   static Future<dynamic> delete(String endpoint) async {
     final headers = await getHeaders();

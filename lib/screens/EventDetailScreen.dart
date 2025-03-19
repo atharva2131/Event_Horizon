@@ -1,3 +1,4 @@
+// lib/screens/EventDetailScreen.dart
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:intl/intl.dart';
@@ -9,10 +10,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:eventhorizon/services/event_service.dart';
-
-
-
-
+import 'package:eventhorizon/utils/image_helper.dart';
+import 'package:eventhorizon/services/api_services.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final Map<String, dynamic> event;
@@ -28,23 +27,20 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   bool _isLoadingContacts = false;
   bool _isUpdatingEvent = false;
   final TextEditingController _newGuestNameController = TextEditingController();
-  final TextEditingController _newGuestEmailController =
-      TextEditingController();
-  final TextEditingController _newGuestPhoneController =
-      TextEditingController();
-  final TextEditingController _invitationMessageController =
-      TextEditingController();
+  final TextEditingController _newGuestEmailController = TextEditingController();
+  final TextEditingController _newGuestPhoneController = TextEditingController();
+  final TextEditingController _invitationMessageController = TextEditingController();
 
   late DateTime eventDateTime;
   int countdownEndTime = 0;
-final EventService _eventService = EventService();
-
+  final EventService _eventService = EventService();
 
   final List<String> galleryImages = [
-    "https://via.placeholder.com/400",  
-    "https://via.placeholder.com/400",
-    "https://via.placeholder.com/400"
-  ];
+  // Use local placeholders instead of via.placeholder.com
+  "${ApiService.baseUrl.replaceAll('/api', '')}/uploads/events/default-event.png",
+  "${ApiService.baseUrl.replaceAll('/api', '')}/uploads/events/default-event.png",
+  "${ApiService.baseUrl.replaceAll('/api', '')}/uploads/events/default-event.png",
+];
 
   // Deep purple color palette
   final Color primaryPurple = const Color(0xFF4A148C); // Deep Purple 900
@@ -60,7 +56,7 @@ final EventService _eventService = EventService();
 
     // Initialize invitation message
     _invitationMessageController.text =
-        "You're invited to ${widget.event['name']}!\n\nJoin us on ${widget.event['date']} at ${widget.event['time']}.\n\nLocation: ${widget.event['location'] ?? 'TBD'}\n\nPlease RSVP by clicking the link below.";
+      "You're invited to ${widget.event['name']}!\n\nJoin us on ${widget.event['date']} at ${widget.event['time']}.\n\nLocation: ${widget.event['location'] ?? 'TBD'}\n\nPlease RSVP by clicking the link below.";
   }
 
   void _updateEventAndReturn() {
@@ -134,8 +130,7 @@ Please RSVP soon!
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) {
-        return StatefulBuilder(
+      builder: (context) => StatefulBuilder(
           builder: (context, setModalState) {
             return Container(
               padding: const EdgeInsets.all(20),
@@ -251,8 +246,7 @@ Please RSVP soon!
               ),
             );
           },
-        );
-      },
+        ),
     );
   }
 
@@ -272,18 +266,18 @@ Please RSVP soon!
     try {
       // Check if guest already exists
       List<Map<String, dynamic>> guestList = [];
-      if (widget.event['guests'] != null) {
-        guestList = List<Map<String, dynamic>>.from(widget.event['guests']);
+      if (widget.event["guests"] != null) {
+        guestList = List<Map<String, dynamic>>.from(widget.event["guests"]);
       }
 
       // Check if contact already exists in guest list
-      bool exists = guestList.any((g) =>
-          (g['email'] == email && email.isNotEmpty) ||
-          (g['phone'] == phone && phone.isNotEmpty));
+      bool exists = guestList.any(
+        (g) => (g["email"] == email && email.isNotEmpty) || (g["phone"] == phone && phone.isNotEmpty),
+      );
 
       if (!exists) {
         // Add guest to backend
-        await _eventService.addGuest(widget.event['id'], {
+        await _eventService.addGuest(widget.event["id"], {
           'name': name,
           'email': email,
           'phone': phone,
@@ -311,7 +305,7 @@ Please RSVP soon!
         );
       } else {
         setState(() => _isUpdatingEvent = false);
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("$name is already in the guest list"),
@@ -321,7 +315,7 @@ Please RSVP soon!
       }
     } catch (e) {
       setState(() => _isUpdatingEvent = false);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Error adding guest: $e"),
@@ -408,9 +402,9 @@ Please RSVP soon!
   }
 
   void _showEditGuestDialog(Map<String, dynamic> guest) {
-    _newGuestNameController.text = guest['name'] ?? '';
-    _newGuestEmailController.text = guest['email'] ?? '';
-    _newGuestPhoneController.text = guest['phone'] ?? '';
+    _newGuestNameController.text = guest["name"] ?? "";
+    _newGuestEmailController.text = guest["email"] ?? "";
+    _newGuestPhoneController.text = guest["phone"] ?? "";
 
     showDialog(
       context: context,
@@ -587,49 +581,45 @@ Please RSVP soon!
 
   Future<void> _updateGuestStatus(Map<String, dynamic> guest, String status) async {
     setState(() => _isUpdatingEvent = true);
-    
+
     try {
       // Convert app status to backend status
       String rsvpStatus;
       bool inviteSent = false;
-      
+
       switch (status) {
-        case 'Confirmed':
-          rsvpStatus = 'confirmed';
+        case "Confirmed":
+          rsvpStatus = "confirmed";
           inviteSent = true;
           break;
-        case 'Declined':
-          rsvpStatus = 'declined';
+        case "Declined":
+          rsvpStatus = "declined";
           inviteSent = true;
           break;
-        case 'Maybe':
-          rsvpStatus = 'maybe';
+        case "Maybe":
+          rsvpStatus = "maybe";
           inviteSent = true;
           break;
-        case 'Invited':
-          rsvpStatus = 'pending';
+        case "Invited":
+          rsvpStatus = "pending";
           inviteSent = true;
           break;
         default:
-          rsvpStatus = 'pending';
+          rsvpStatus = "pending";
           inviteSent = false;
       }
-      
+
       // Update RSVP status in backend
-      await _eventService.updateGuestRsvp(
-        widget.event['id'],
-        guest['email'],
-        rsvpStatus
-      );
-      
+      await _eventService.updateGuestRsvp(widget.event["id"], guest["email"], rsvpStatus);
+
       // Update local state
       setState(() {
         guest['status'] = status;
         _isUpdatingEvent = false;
       });
-      
+
       _updateEventAndReturn();
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Guest status updated to $status"),
@@ -638,7 +628,7 @@ Please RSVP soon!
       );
     } catch (e) {
       setState(() => _isUpdatingEvent = false);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Error updating guest status: $e"),
@@ -714,8 +704,8 @@ Please RSVP soon!
   }
 
   void _inviteGuest(Map<String, dynamic> guest) {
-    String email = guest['email'] ?? '';
-    String phone = guest['phone'] ?? '';
+    String email = guest["email"] ?? "";
+    String phone = guest["phone"] ?? "";
 
     if (email.isEmpty && phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -777,7 +767,7 @@ Please RSVP soon!
   }
 
   Future<void> _sendEmailInvitation(Map<String, dynamic> guest) async {
-    String email = guest['email'] ?? '';
+    String email = guest["email"] ?? "";
     if (email.isEmpty) return;
 
     final Uri emailUri = Uri(
@@ -790,20 +780,16 @@ Please RSVP soon!
     try {
       if (await canLaunchUrl(emailUri)) {
         await launchUrl(emailUri);
-        
+
         // Update guest status in backend
-        await _eventService.updateGuestRsvp(
-          widget.event['id'],
-          guest['email'],
-          'pending'
-        );
-        
+        await _eventService.updateGuestRsvp(widget.event["id"], guest["email"], "pending");
+
         setState(() {
           guest['status'] = 'Invited';
         });
-        
+
         _updateEventAndReturn();
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Invitation email sent to ${guest['name']}"),
@@ -823,7 +809,7 @@ Please RSVP soon!
   }
 
   Future<void> _sendSMSInvitation(Map<String, dynamic> guest) async {
-    String phone = guest['phone'] ?? '';
+    String phone = guest["phone"] ?? "";
     if (phone.isEmpty) return;
 
     final Uri smsUri = Uri(
@@ -835,20 +821,16 @@ Please RSVP soon!
     try {
       if (await canLaunchUrl(smsUri)) {
         await launchUrl(smsUri);
-        
+
         // Update guest status in backend
-        await _eventService.updateGuestRsvp(
-          widget.event['id'],
-          guest['email'],
-          'pending'
-        );
-        
+        await _eventService.updateGuestRsvp(widget.event["id"], guest["email"], "pending");
+
         setState(() {
           guest['status'] = 'Invited';
         });
-        
+
         _updateEventAndReturn();
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Invitation SMS sent to ${guest['name']}"),
@@ -952,25 +934,22 @@ Please RSVP soon!
 
   Future<void> _sendInvitationsToAll() async {
     setState(() => _isUpdatingEvent = true);
-    
+
     try {
-      List<Map<String, dynamic>> guestList =
-          List<Map<String, dynamic>>.from(widget.event['guests']);
-      
+      List<Map<String, dynamic>> guestList = List<Map<String, dynamic>>.from(widget.event["guests"]);
+
       // Get emails of guests who are not invited yet
       List<String> guestEmails = [];
-      
+
       for (var guest in guestList) {
-        if (guest['status'] == 'Not Invited' && 
-            guest['email'] != null && 
-            guest['email'].isNotEmpty) {
-          guestEmails.add(guest['email']);
+        if (guest["status"] == "Not Invited" && guest["email"] != null && guest["email"].isNotEmpty) {
+          guestEmails.add(guest["email"]);
         }
       }
-      
+
       if (guestEmails.isEmpty) {
         setState(() => _isUpdatingEvent = false);
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("No uninvited guests with email found"),
@@ -979,27 +958,24 @@ Please RSVP soon!
         );
         return;
       }
-      
+
       // Send invitations via backend
-      final result = await _eventService.sendInvitations(
-        widget.event['id'],
-        guestEmails
-      );
-      
+      final result = await _eventService.sendInvitations(widget.event["id"], guestEmails);
+
       // Update local state
       for (var guest in guestList) {
-        if (guestEmails.contains(guest['email'])) {
-          guest['status'] = 'Invited';
+        if (guestEmails.contains(guest["email"])) {
+          guest["status"] = "Invited";
         }
       }
-      
+
       setState(() {
         widget.event['guests'] = guestList;
         _isUpdatingEvent = false;
       });
-      
+
       _updateEventAndReturn();
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Invitations sent to ${guestEmails.length} guests"),
@@ -1008,7 +984,7 @@ Please RSVP soon!
       );
     } catch (e) {
       setState(() => _isUpdatingEvent = false);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Error sending invitations: $e"),
@@ -1131,7 +1107,7 @@ Please RSVP soon!
         background: Stack(
           fit: StackFit.expand,
           children: [
-            _displayEventImage(widget.event['image_url'] ?? ''),
+            ImageHelper.displayEventImage(widget.event['image_url'] ?? '', height: 250),
             // Gradient overlay for better text visibility
             Container(
               decoration: BoxDecoration(
@@ -1165,24 +1141,6 @@ Please RSVP soon!
         ),
       ],
     );
-  }
-
-  Widget _displayEventImage(String imageUrl) {
-    return imageUrl.startsWith('http')
-        ? Image.network(
-            imageUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Image.network(
-                "https://via.placeholder.com/400",
-                fit: BoxFit.cover,
-              );
-            },
-          )
-        : Image.file(
-            File(imageUrl),
-            fit: BoxFit.cover,
-          );
   }
 
   Widget _buildEventDetails() {
@@ -1230,8 +1188,7 @@ Please RSVP soon!
               ),
             ],
           ),
-          if (widget.event['description'] != null &&
-              widget.event['description']!.isNotEmpty) ...[
+          if (widget.event["description"] != null && widget.event["description"]!.isNotEmpty) ...[
             const SizedBox(height: 20),
             Text(
               "About",
@@ -1464,8 +1421,8 @@ Please RSVP soon!
 
   Widget _buildGuestsSection() {
     List<Map<String, dynamic>> guestList = [];
-    if (widget.event['guests'] != null) {
-      guestList = List<Map<String, dynamic>>.from(widget.event['guests']);
+    if (widget.event["guests"] != null) {
+      guestList = List<Map<String, dynamic>>.from(widget.event["guests"]);
     }
 
     return Container(
@@ -1601,20 +1558,20 @@ Please RSVP soon!
   }
 
   Widget _buildGuestItem(Map<String, dynamic> guest) {
-    String name = guest['name'] ?? "";
-    String email = guest['email'] ?? "";
-    String phone = guest['phone'] ?? "";
-    String status = guest['status'] ?? "Not Invited";
+    String name = guest["name"] ?? "";
+    String email = guest["email"] ?? "";
+    String phone = guest["phone"] ?? "";
+    String status = guest["status"] ?? "Not Invited";
 
     Color statusColor;
     switch (status) {
-      case 'Confirmed':
+      case "Confirmed":
         statusColor = Colors.green;
         break;
-      case 'Declined':
+      case "Declined":
         statusColor = Colors.red;
         break;
-      case 'Maybe':
+      case "Maybe":
         statusColor = Colors.orange;
         break;
       default:
@@ -1690,13 +1647,13 @@ Please RSVP soon!
           PopupMenuButton<String>(
             icon: Icon(Icons.more_vert, color: Colors.grey[600]),
             onSelected: (value) {
-              if (value == 'edit') {
+              if (value == "edit") {
                 _showEditGuestDialog(guest);
-              } else if (value == 'delete') {
+              } else if (value == "delete") {
                 _deleteGuest(guest);
-              } else if (value == 'invite') {
+              } else if (value == "invite") {
                 _inviteGuest(guest);
-              } else if (value == 'status') {
+              } else if (value == "status") {
                 _showChangeStatusDialog(guest);
               }
             },
