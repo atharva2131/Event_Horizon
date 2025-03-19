@@ -34,6 +34,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     _loadUserProfile();
   }
 
+  // Get initials from name
+  String getInitials(String name) {
+    if (name.isEmpty) return "?";
+    
+    List<String> nameParts = name.split(' ');
+    if (nameParts.length > 1) {
+      return nameParts[0][0].toUpperCase() + nameParts[1][0].toUpperCase();
+    } else {
+      return name[0].toUpperCase();
+    }
+  }
+
   Future<void> _loadUserProfile() async {
     setState(() => isLoading = true);
     try {
@@ -302,18 +314,31 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildProfileHeader() {
+    final String userName = userProfile['name'] ?? 'User Name';
+    final String userInitials = getInitials(userName);
+    final String? profileImageUrl = userProfile['profileImage'];
+    final bool hasProfileImage = profileImageUrl != null && profileImageUrl.isNotEmpty && profileImageUrl != "null";
+
     return Container(
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
           CircleAvatar(
             radius: 60,
-            backgroundImage: NetworkImage(userProfile['profileImage'] ?? "https://via.placeholder.com/150"),
             backgroundColor: lightPurple,
+            backgroundImage: hasProfileImage ? NetworkImage(profileImageUrl!) : null,
+            child: !hasProfileImage ? Text(
+              userInitials,
+              style: const TextStyle(
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ) : null,
           ),
           const SizedBox(height: 16),
           Text(
-            userProfile['name'] ?? 'User Name',
+            userName,
             style: GoogleFonts.poppins(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -495,8 +520,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         children: [
           CircleAvatar(
             radius: 35,
-            backgroundImage: NetworkImage(imageUrl),
             backgroundColor: lightPurple,
+            backgroundImage: NetworkImage(imageUrl),
           ),
           const SizedBox(height: 8),
           Text(

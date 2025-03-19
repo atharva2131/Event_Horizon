@@ -1,3 +1,4 @@
+// lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
@@ -8,8 +9,10 @@ import 'package:eventhorizon/widgets/user_bottom_nav_screen.dart';
 import 'package:eventhorizon/screens/EventDetailScreen.dart';
 import '../services/event_service.dart';
 import '../services/api_services.dart';
+import 'package:eventhorizon/utils/image_helper.dart';
 
 class HomeScreen extends StatefulWidget {
+  
   const HomeScreen({super.key});
 
   @override
@@ -20,11 +23,11 @@ class _HomeScreenState extends State<HomeScreen> {
   // Define the deep purple color as a constant for consistent usage
   final Color primaryColor = Colors.deepPurple;
   final Color primaryLightColor = Colors.deepPurple[100]!;
-  
+
   List<Map<String, dynamic>> events = [];
   Map<String, dynamic> userProfile = {
-    'name': 'User',
-    'avatar_url': 'https://via.placeholder.com/150',
+    'name': "User",
+    'avatar_url': "https://via.placeholder.com/150",
   };
   bool isLoading = true;
   String? errorMessage;
@@ -74,54 +77,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Only updating the _loadEvents method to properly handle events and images
-
-Future<void> _loadEvents() async {
-  setState(() => isLoading = true);
-  try {
-    print('Loading events...');
-    // Get events from the API
-    final apiEvents = await _eventService.getEvents();
-    print('Loaded ${apiEvents.length} events from API');
-    
-    // Process each event to ensure image URLs are correct
-    for (var event in apiEvents) {
-      if (event['eventImage'] != null && event['eventImage'].isNotEmpty) {
-        print('Event ${event['name']} has image: ${event['eventImage']}');
-        
-        
-        // Ensure image URL is properly formatted
-        if (!event['eventImage'].startsWith('http')) {
-          // If it's a local file path, check if it exists
-          final file = File(event['eventImage']);
-          if (await file.exists()) {
-            print('Image file exists locally: ${event['eventImage']}');
-          } else {
-            // If not a valid local file, try to construct a full URL
-            event['eventImage'] = '${ApiService.baseUrl}${event['eventImage']}';
-            print('Constructed full URL: ${event['eventImage']}');
-            
-          }
-        }
-      } else {
-        print('Event ${event['name']} has no image');
-      }
+  Future<void> _loadEvents() async {
+    setState(() => isLoading = true);
+    try {
+      print('Loading events...');
+      // Get events from the API
+      final apiEvents = await _eventService.getEvents();
+      print('Loaded ${apiEvents.length} events from API');
+      
+      setState(() {
+        events = apiEvents;
+        isLoading = false;
+      });
+      
+      print('Events set in state: ${events.length}');
+    } catch (e) {
+      print('Error loading events: $e');
+      setState(() {
+        events = []; // Set empty events list
+        isLoading = false;
+      });
     }
-    
-    setState(() {
-      events = apiEvents;
-      isLoading = false;
-    });
-    
-    print('Events set in state: ${events.length}');
-  } catch (e) {
-    print('Error loading events: $e');
-    setState(() {
-      events = []; // Set empty events list
-      isLoading = false;
-    });
   }
-}
 
   Future<void> _navigateToCreateEventScreen(BuildContext context) async {
     final newEvent = await Navigator.push(
@@ -209,11 +186,11 @@ Future<void> _loadEvents() async {
 
   Widget _buildHeader() {
     // Extract first name safely
-    String firstName = 'User';
-    if (userProfile['name'] != null && userProfile['name'].toString().isNotEmpty) {
-      firstName = userProfile['name'].toString().split(' ')[0];
+    String firstName = "User";
+    if (userProfile["name"] != null && userProfile["name"].toString().isNotEmpty) {
+      firstName = userProfile["name"].toString().split(" ")[0];
     }
-    
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 40, 16, 20),
       decoration: BoxDecoration(
@@ -299,16 +276,14 @@ Future<void> _loadEvents() async {
               width: double.infinity,
               height: 180,
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
+              errorBuilder: (context, error, stackTrace) => Container(
                   width: double.infinity,
                   height: 180,
                   color: primaryLightColor,
                   child: const Center(
                     child: Icon(Icons.image_not_supported, size: 50, color: Colors.white),
                   ),
-                );
-              },
+              ),
             ),
           ),
           Container(
@@ -422,23 +397,23 @@ Future<void> _loadEvents() async {
           int.parse(dateParts[0]),
         );
         return eventDate.isAfter(DateTime.now());
-      } catch (e) {
+      } catch(e) {
         return false;
       }
     }).length;
-    
+
     // Calculate budget used and total
     double budgetUsed = 0;
     double totalBudget = 0;
-    
+
     for (var event in events) {
-      if (event['budget'] != null && event['budget'].toString().isNotEmpty) {
-        totalBudget += double.tryParse(event['budget'].toString()) ?? 0;
+      if (event["budget"] != null && event["budget"].toString().isNotEmpty) {
+        totalBudget += double.tryParse(event["budget"].toString()) ?? 0;
         // Assume 50% of budget is used for demo purposes
-        budgetUsed += (double.tryParse(event['budget'].toString()) ?? 0) * 0.5;
+        budgetUsed += (double.tryParse(event["budget"].toString()) ?? 0) * 0.5;
       }
     }
-    
+
     return Row(
       children: [
         Expanded(
@@ -605,7 +580,7 @@ Future<void> _loadEvents() async {
                               topLeft: Radius.circular(16),
                               topRight: Radius.circular(16),
                             ),
-                            child: _displayEventImage(event['eventImage']),
+                            child: ImageHelper.displayEventImage(event['eventImage']),
                           ),
                           Padding(
                             padding: const EdgeInsets.all(16.0),
@@ -723,73 +698,6 @@ Future<void> _loadEvents() async {
       ),
     );
   }
-
-  Widget _displayEventImage(String? imageUrl) {
-  print('Displaying image: $imageUrl');
-  
-  if (imageUrl == null || imageUrl.isEmpty) {
-    return Container(
-      width: double.infinity,
-      height: 180,
-      color: primaryLightColor,
-      child: Icon(
-        Icons.image,
-        size: 64,
-        color: primaryColor,
-      ),
-    );
-  } else if (imageUrl.startsWith("http")) {
-    return Image.network(
-      imageUrl,
-      width: double.infinity,
-      height: 180,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        print('Error loading network image: $error');
-        return Container(
-          width: double.infinity,
-          height: 180,
-          color: primaryLightColor,
-          child: Icon(
-            Icons.broken_image,
-            size: 64,
-            color: primaryColor,
-          ),
-        );
-      },
-    );
-  } else {
-    // Try to load as a local file
-    return Image.file(
-      File(imageUrl),
-      width: double.infinity,
-      height: 180,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        print('Error loading file image: $error');
-        // If local file fails, try as a relative URL
-        return Image.network(
-          '${ApiService.baseUrl}$imageUrl',
-          width: double.infinity,
-          height: 180,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) {
-            return Container(
-              width: double.infinity,
-              height: 180,
-              color: primaryLightColor,
-              child: Icon(
-                Icons.broken_image,
-                size: 64,
-                color: primaryColor,
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-}
 }
 
 // Extension to capitalize first letter

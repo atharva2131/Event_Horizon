@@ -35,6 +35,18 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
     _loadVendorProfile();
   }
 
+  // Get initials from name
+  String getInitials(String name) {
+    if (name.isEmpty) return "?";
+    
+    List<String> nameParts = name.split(' ');
+    if (nameParts.length > 1) {
+      return nameParts[0][0].toUpperCase() + nameParts[1][0].toUpperCase();
+    } else {
+      return name[0].toUpperCase();
+    }
+  }
+
   Future<void> _loadVendorProfile() async {
     setState(() => isLoading = true);
     try {
@@ -319,6 +331,11 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
   }
 
   Widget _buildProfileHeader() {
+    final String vendorName = vendorProfile['name'] ?? "Vendor Name";
+    final String vendorInitials = getInitials(vendorName);
+    final String? profileImageUrl = vendorProfile['profileImage'];
+    final bool hasProfileImage = profileImageUrl != null && profileImageUrl.isNotEmpty && profileImageUrl != "null";
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -341,12 +358,21 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
             ),
             child: CircleAvatar(
               radius: 50,
-              backgroundImage: NetworkImage(vendorProfile['profileImage'] ?? "https://via.placeholder.com/150"),
+              backgroundColor: accentColor,
+              backgroundImage: hasProfileImage ? NetworkImage(profileImageUrl!) : null,
+              child: !hasProfileImage ? Text(
+                vendorInitials,
+                style: const TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ) : null,
             ),
           ),
           const SizedBox(height: 16),
           Text(
-            vendorProfile['name'] ?? "Vendor Name",
+            vendorName,
             style: const TextStyle(
               fontSize: 26,
               fontWeight: FontWeight.bold,
@@ -651,6 +677,9 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
   }
 
   Widget _buildCollaborator(String name, String role, String imageUrl) {
+    final String collaboratorInitials = getInitials(name);
+    final bool isPlaceholder = imageUrl.contains('placeholder');
+
     return Container(
       width: 100,
       margin: const EdgeInsets.only(right: 16),
@@ -663,7 +692,16 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
             ),
             child: CircleAvatar(
               radius: 30,
-              backgroundImage: NetworkImage(imageUrl),
+              backgroundColor: accentColor,
+              backgroundImage: isPlaceholder ? null : NetworkImage(imageUrl),
+              child: isPlaceholder ? Text(
+                collaboratorInitials,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ) : null,
             ),
           ),
           const SizedBox(height: 8),
