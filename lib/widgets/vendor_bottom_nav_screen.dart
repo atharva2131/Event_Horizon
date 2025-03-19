@@ -1,9 +1,9 @@
-import 'package:eventhorizon/screens/vendor_search_screen.dart';
-import 'package:flutter/material.dart';
 import 'package:eventhorizon/screens/vendor_home_screen.dart';
+import 'package:eventhorizon/screens/vendor_search_screen.dart';
 import 'package:eventhorizon/screens/vendor_bookings_screen.dart';
 import 'package:eventhorizon/screens/vendor_messages_screen.dart';
 import 'package:eventhorizon/screens/vendor_profile_screen.dart';
+import 'package:flutter/material.dart';
 
 class VendorDashboard extends StatelessWidget {
   final int initialIndex;
@@ -34,16 +34,14 @@ class _VendorBottomNavScreenState extends State<VendorBottomNavScreen> {
     _selectedIndex = widget.initialIndex;
   }
 
-  
-
   @override
   Widget build(BuildContext context) {
     final List<Widget> _screens = [
       const VendorHomeScreen(),
-      const VendorSearchScreen(),
+      const VendorSearchScreen(), // Added Analytics Screen
       const VendorBookingsScreen(),
       const VendorMessagesScreen(),
-      const VendorProfileScreen(vendorIndex: 0), // Ensure vendorIndex is passed
+      const VendorProfileScreen(vendorIndex: 0),
     ];
 
     return Scaffold(
@@ -62,7 +60,7 @@ class _VendorBottomNavScreenState extends State<VendorBottomNavScreen> {
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: "Search"),
+          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: "Analytics"), // Updated icon & label
           BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: "Bookings"),
           BottomNavigationBarItem(icon: Icon(Icons.message), label: "Messages"),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),

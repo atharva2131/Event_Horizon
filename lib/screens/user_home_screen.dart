@@ -6,6 +6,7 @@ import 'package:eventhorizon/screens/event_timeline_screen.dart';
 import 'package:eventhorizon/screens/User_CreateEventScreen.dart';
 import 'package:eventhorizon/widgets/user_bottom_nav_screen.dart';
 import 'package:eventhorizon/screens/EventDetailScreen.dart';
+import 'package:eventhorizon/screens/notification_screen.dart';
 import '../services/event_service.dart';
 import '../services/api_services.dart';
 
@@ -261,18 +262,27 @@ Future<void> _loadEvents() async {
               ),
             ],
           ),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.notifications_outlined,
-              size: 28,
-              color: Colors.white,
-            ),
-          ),
+         // In your HomeScreen class, update the notification icon's onTap:
+Container(
+  padding: const EdgeInsets.all(8),
+  decoration: BoxDecoration(
+    color: Colors.white.withOpacity(0.2),
+    borderRadius: BorderRadius.circular(12),
+  ),
+  child: GestureDetector(
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const NotificationScreen()),
+      );
+    },
+    child: const Icon(
+      Icons.notifications_outlined,
+      size: 28,
+      color: Colors.white,
+    ),
+  ),
+),
         ],
       ),
     );
