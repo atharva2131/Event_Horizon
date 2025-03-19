@@ -41,7 +41,7 @@ class _VendorDashboardState extends State<VendorDashboard> {
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: "Analytics"),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: "Search"),
           BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: "Bookings"),
           BottomNavigationBarItem(icon: Icon(Icons.message), label: "Messages"),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),

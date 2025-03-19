@@ -346,15 +346,6 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     );
   }
 
-<<<<<<< HEAD
-  // FIXED: Create event with proper image upload handling
-  Future<void> _createEvent() async {
-    if (_eventNameController.text.isEmpty ||
-        _selectedEventType == null ||
-        _dateController.text.isEmpty ||
-        _timeController.text.isEmpty ||
-        _locationController.text.isEmpty) {
-=======
   Future<void> _createEvent() async {
     if (
       _eventNameController.text.isEmpty ||
@@ -363,7 +354,6 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       _timeController.text.isEmpty ||
       _locationController.text.isEmpty
     ) {
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text("Please fill all required fields"),
@@ -381,45 +371,22 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
     try {
       // Parse date
-<<<<<<< HEAD
-      List<String> dateParts = _dateController.text.split('/');
-=======
       List<String> dateParts = _dateController.text.split("/");
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
       if (dateParts.length != 3) {
         throw FormatException("Invalid date format. Expected dd/MM/yyyy");
       }
 
       // Fix the time string if it contains a dot (.)
-<<<<<<< HEAD
-      String timeText = _timeController.text.replaceAll('.', ':');
-
-      // Parse time
-      List<String> timeParts = timeText.split(':');
-=======
       String timeText = _timeController.text.replaceAll(".", ":");
 
       // Parse time
       List<String> timeParts = timeText.split(":");
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
       if (timeParts.length != 2) {
         throw FormatException("Invalid time format. Expected HH:mm");
       }
 
       // Format date for API
       String formattedDate = "${dateParts[2]}-${dateParts[1].padLeft(2, '0')}-${dateParts[0].padLeft(2, '0')}"; // YYYY-MM-DD
-<<<<<<< HEAD
-      
-      // Format guests properly
-      List<Map<String, dynamic>> formattedGuests = _guestList.map((guest) => {
-        'name': guest['name'] ?? '',
-        'email': guest['email'] ?? '',
-        'phone': guest['phone'] ?? '',
-        'rsvpStatus': 'pending',
-        'inviteSent': false,
-        'source': 'manual',
-      }).toList();
-=======
 
       // Format guests properly
       List<Map<String, dynamic>> formattedGuests = _guestList
@@ -432,7 +399,6 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           'source': 'manual',
         })
         .toList();
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
 
       // Parse budget safely
       double? budget;
@@ -450,11 +416,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         'budget': budget ?? 0,
         'category': _selectedEventType,
         'isPublic': false,
-<<<<<<< HEAD
-        'status': 'planning',
-=======
         'status': "planning",
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
         'guests': formattedGuests,
       };
 
@@ -463,25 +425,6 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
       // Create event on the server
       final createdEvent = await _eventService.createEvent(eventData);
-<<<<<<< HEAD
-      
-      // Upload image if selected
-      String? imageUrl;
-      if (_coverImage != null && createdEvent['_id'] != null) {
-        try {
-          // Verify the image file exists and has content
-          if (await _coverImage!.exists() && await _coverImage!.length() > 0) {
-            print("Uploading image for event: ${createdEvent['_id']}");
-            
-            // Try to upload the image
-            imageUrl = await _eventService.uploadEventImage(createdEvent['_id'], _coverImage!);
-            print("Image uploaded successfully: $imageUrl");
-            
-            // Update event with image URL if upload was successful
-            if (imageUrl.isNotEmpty) {
-              await _eventService.updateEvent(createdEvent['_id'], {
-                'eventImage': imageUrl
-=======
 
       // Upload image if selected
       String? imageUrl;
@@ -499,7 +442,6 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             if (imageUrl != null && imageUrl.isNotEmpty) {
               await _eventService.updateEvent(createdEvent["_id"], {
                 'eventImage': imageUrl,
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
               });
               print("Event updated with image URL: $imageUrl");
             }
@@ -521,11 +463,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
       // Format the event for the app
       final newEvent = {
-<<<<<<< HEAD
-        'id': createdEvent['_id'],
-=======
         'id': createdEvent["_id"],
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
         'name': _eventNameController.text,
         'type': _selectedEventType!,
         'date': _dateController.text,
@@ -533,11 +471,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         'location': _locationController.text,
         'description': _descriptionController.text,
         'budget': _budgetController.text,
-<<<<<<< HEAD
-        'image_url': imageUrl ?? '',
-=======
         'eventImage': imageUrl ?? "",
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
         'guests': _guestList,
       };
 
@@ -559,11 +493,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       setState(() {
         _isCreatingEvent = false;
       });
-<<<<<<< HEAD
-      
-=======
 
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Error creating event: $e"),

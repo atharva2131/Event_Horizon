@@ -6,15 +6,8 @@ import 'package:eventhorizon/screens/vendor_bookings_screen.dart' as vendorBooki
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-<<<<<<< HEAD
-import 'package:eventhorizon/screens/vendor_pending_reviews_screen.dart';
-import 'package:eventhorizon/screens/vendor_revenue_screen.dart';
-import 'package:eventhorizon/screens/notification_helper.dart';
-import 'package:eventhorizon/screens/notification_service.dart';
-=======
 import 'package:path/path.dart' as path;
 import 'package:http_parser/http_parser.dart';
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
 
 class VendorHomeScreen extends StatefulWidget {
   const VendorHomeScreen({super.key});
@@ -40,14 +33,6 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
   bool isPortfolioLoading = false;
   String? errorMessage;
 
-<<<<<<< HEAD
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _priceController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _addressController = TextEditingController();
-
-  List<String> portfolioImages = [];
-=======
   // Controllers for form inputs
   final TextEditingController _serviceNameController = TextEditingController();
   final TextEditingController _serviceDescController = TextEditingController();
@@ -57,7 +42,6 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
   final TextEditingController _portfolioTitleController = TextEditingController();
   final TextEditingController _portfolioDescController = TextEditingController();
   final TextEditingController _portfolioUrlController = TextEditingController();
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
 
   final ImagePicker _picker = ImagePicker();
 
@@ -794,46 +778,27 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
     );
   }
 
-<<<<<<< HEAD
-  // New method to show vendor info edit modal
-  void _showVendorInfoModal() {
-    _descriptionController.text = vendorProfile['description'] ?? '';
-    _addressController.text = vendorProfile['address'] ?? '';
-=======
   // Show modal to add a new portfolio item
   void _showAddPortfolioModal(String? serviceId, String serviceName) {
     _portfolioTitleController.clear();
     _portfolioDescController.clear();
     _portfolioUrlController.clear();
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-<<<<<<< HEAD
-          title: const Text("Vendor Information", style: TextStyle(fontWeight: FontWeight.bold)),
-=======
           title: Text("Add Portfolio Item for $serviceName", 
             style: const TextStyle(fontWeight: FontWeight.bold)),
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-<<<<<<< HEAD
-                  controller: _descriptionController,
-                  maxLines: 4,
-                  decoration: InputDecoration(
-                    labelText: "Business Description",
-                    hintText: "Tell customers about your business...",
-=======
                   controller: _portfolioTitleController,
                   decoration: InputDecoration(
                     labelText: "Title",
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     filled: true,
                     fillColor: Colors.grey[50],
@@ -845,12 +810,6 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextField(
-<<<<<<< HEAD
-                  controller: _addressController,
-                  decoration: InputDecoration(
-                    labelText: "Business Address",
-                    hintText: "Enter your business location",
-=======
                   controller: _portfolioDescController,
                   maxLines: 3,
                   decoration: InputDecoration(
@@ -870,7 +829,6 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                   decoration: InputDecoration(
                     labelText: "Media URL",
                     hintText: "https://example.com/image.jpg",
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     filled: true,
                     fillColor: Colors.grey[50],
@@ -890,8 +848,6 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
-<<<<<<< HEAD
-=======
                 if (_portfolioTitleController.text.isEmpty || _portfolioUrlController.text.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Title and Media URL are required")),
@@ -899,7 +855,6 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                   return;
                 }
                 
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
                 try {
                   final prefs = await SharedPreferences.getInstance();
                   final token = prefs.getString('token');
@@ -911,50 +866,13 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                     return;
                   }
                   
-<<<<<<< HEAD
-                  final response = await http.put(
-                    Uri.parse('http://192.168.29.168:3000/api/vendor/profile'),
-=======
                   final response = await http.post(
                     Uri.parse('$baseApiUrl/vendors/portfolio'),
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
                     headers: {
                       'Content-Type': 'application/json',
                       'Authorization': 'Bearer $token',
                     },
                     body: jsonEncode({
-<<<<<<< HEAD
-                      'description': _descriptionController.text,
-                      'address': _addressController.text,
-                    }),
-                  );
-
-                  if (response.statusCode == 200) {
-                    setState(() {
-                      vendorProfile['description'] = _descriptionController.text;
-                      vendorProfile['address'] = _addressController.text;
-                    });
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Vendor information updated successfully')),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Failed to update vendor information")),
-                    );
-                  }
-                } catch (e) {
-                  print('Error updating vendor info: $e');
-                  // Update optimistically
-                  setState(() {
-                    vendorProfile['description'] = _descriptionController.text;
-                    vendorProfile['address'] = _addressController.text;
-                  });
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Vendor information updated')),
-                  );
-=======
                       'title': _portfolioTitleController.text,
                       'description': _portfolioDescController.text,
                       'mediaUrl': _portfolioUrlController.text,
@@ -1019,7 +937,6 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                   _portfolioUrlController.clear();
                   
                   Navigator.pop(context);
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -1028,11 +945,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
-<<<<<<< HEAD
-              child: const Text("Save Changes"),
-=======
               child: const Text("Add Item"),
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
             ),
           ],
         );
@@ -1040,12 +953,8 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
     );
   }
 
-<<<<<<< HEAD
-  Future<void> _pickImage() async {
-=======
   // Pick image from gallery and upload to portfolio
   Future<void> _pickImage(String? serviceId, String serviceName) async {
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
       setState(() {
@@ -1234,15 +1143,15 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
         backgroundColor: primaryColor,
         elevation: 0,
         actions: [
-  FutureBuilder<int>(
-  future: NotificationService.getUnreadUserNotificationCount(),
-  builder: (context, snapshot) {
-    final count = snapshot.data ?? 0;
-    return NotificationHelper.buildUserNotificationIcon(context, count);
-  },
-),
-  // Other actions...
-],
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            onPressed: () {},
+          ),
+        ],
       ),
       body: isLoading 
           ? Center(child: CircularProgressIndicator(color: primaryColor))
@@ -1272,25 +1181,6 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                     ),
                   ),
                 )
-<<<<<<< HEAD
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      _buildProfileCard(),
-                      const SizedBox(height: 20),
-                      _buildStatsGrid(context),
-                      const SizedBox(height: 20),
-                      _buildServicesSection(),
-                      const SizedBox(height: 20),
-                      _buildPortfolioSection(),
-                      const SizedBox(height: 20),
-                      _buildVendorInfoSection(),
-                      const SizedBox(height: 20),
-                      _buildContactInfo(),
-                      const SizedBox(height: 20),
-                    ],
-=======
               : RefreshIndicator(
                   onRefresh: () async {
                     await _loadVendorProfile();
@@ -1311,151 +1201,12 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                         const SizedBox(height: 20),
                       ],
                     ),
->>>>>>> fb85b74209284c97e471ff6a4578c8195759ef00
                   ),
                 ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddServiceModal,
         backgroundColor: primaryColor,
         child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  // New method to build vendor info section
-  Widget _buildVendorInfoSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: _boxDecoration(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "Vendor Information",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-              IconButton(
-                icon: Icon(Icons.edit, color: primaryColor),
-                onPressed: _showVendorInfoModal,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Business Description
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[200]!),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.info_outline, color: primaryColor),
-                    const SizedBox(width: 8),
-                    const Text(
-                      "About Business",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  vendorProfile['description'] ?? "No business description available. Click the edit button to add information about your business.",
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.grey[800],
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Location
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[200]!),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.location_on, color: primaryColor),
-                    const SizedBox(width: 8),
-                    const Text(
-                      "Business Location",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  vendorProfile['address'] ?? "No address available. Click the edit button to add your business location.",
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.grey[800],
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (vendorProfile['address'] != null && vendorProfile['address'].toString().isNotEmpty)
-                  GestureDetector(
-                    onTap: () {
-                      // Open maps with the location
-                      final address = Uri.encodeComponent(vendorProfile['address']);
-                      final url = 'https://www.google.com/maps/search/?api=1&query=$address';
-                      
-                      // This would normally use url_launcher, but we'll just show a snackbar for now
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Opening maps for: ${vendorProfile['address']}')),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.map, size: 18, color: primaryColor),
-                          const SizedBox(width: 8),
-                          Text(
-                            "View on Map",
-                            style: TextStyle(
-                              color: primaryColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1564,50 +1315,37 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
     );
   }
 
-  
-Widget _buildStatsGrid(BuildContext context) {
-  return Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      _buildStatCard(
-        Icons.calendar_today,
-        "New Bookings",
-        vendorProfile['new_bookings']?.toString() ?? "0",
-        Colors.orange[400]!,
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const vendorBookings.VendorBookingsScreen()),
-          );
-        },
-      ),
-      _buildStatCard(
-        Icons.star,
-        "Pending Reviews",
-        vendorProfile['pending_reviews']?.toString() ?? "0",
-        primaryColor,
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const VendorPendingReviewsScreen()),
-          );
-        },
-      ),
-      _buildStatCard(
-        Icons.attach_money,
-        "Total Revenue",
-        "\$${vendorProfile['total_revenue']?.toString() ?? "0"}",
-        Colors.green[400]!,
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const VendorRevenueScreen()),
-          );
-        },
-      ),
-    ],
-  );
-}
+  Widget _buildStatsGrid(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _buildStatCard(
+          Icons.calendar_today,
+          "New Bookings",
+          vendorProfile['new_bookings']?.toString() ?? "0",
+          Colors.orange[400]!,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const vendorBookings.VendorBookingsScreen()),
+            );
+          },
+        ),
+        _buildStatCard(
+          Icons.star,
+          "Pending Reviews",
+          vendorProfile['pending_reviews']?.toString() ?? "0",
+          primaryColor,
+        ),
+        _buildStatCard(
+          Icons.attach_money,
+          "Total Revenue",
+          "\$${vendorProfile['total_revenue']?.toString() ?? "0"}",
+          Colors.green[400]!,
+        ),
+      ],
+    );
+  }
 
   Widget _buildStatCard(
     IconData icon,
