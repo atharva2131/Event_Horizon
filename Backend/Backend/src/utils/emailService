@@ -1,0 +1,38 @@
+const nodemailer = require("nodemailer");
+
+// Configure the email transporter
+const transporter = nodemailer.createTransport({
+    service: "gmail", // Change this if you're using another service
+    auth: {
+        user: process.env.EMAIL_USER, // Set this in your .env file
+        pass: process.env.EMAIL_PASS, // Set this in your .env file
+    },
+});
+
+/**
+ * Sends an email using Nodemailer.
+ * @param {string} to - Recipient email.
+ * @param {string} subject - Email subject.
+ * @param {string} text - Plain text body.
+ * @param {string} html - HTML body (optional).
+ */
+const sendEmail = async (to, subject, text, html = null) => {
+    try {
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to,
+            subject,
+            text,
+            ...(html && { html }), // Add HTML body only if provided
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log("Email sent:", info.response);
+        return info;
+    } catch (error) {
+        console.error("Error sending email:", error);
+        throw error;
+    }
+};
+
+module.exports = { sendEmail };
