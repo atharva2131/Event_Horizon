@@ -326,7 +326,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           CircleAvatar(
             radius: 60,
             backgroundColor: lightPurple,
-            backgroundImage: hasProfileImage ? NetworkImage(profileImageUrl!) : null,
+            backgroundImage: hasProfileImage ? NetworkImage(profileImageUrl) : null,
             child: !hasProfileImage ? Text(
               userInitials,
               style: const TextStyle(

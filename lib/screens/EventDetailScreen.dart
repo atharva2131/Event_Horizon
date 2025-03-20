@@ -1,6 +1,4 @@
-// lib/screens/EventDetailScreen.dart
 import 'package:flutter/material.dart';
-import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:flutter_countdown_timer/flutter_countdown_timer.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -36,11 +34,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   final EventService _eventService = EventService();
 
   final List<String> galleryImages = [
-  // Use local placeholders instead of via.placeholder.com
-  "${ApiService.baseUrl.replaceAll('/api', '')}/uploads/events/default-event.png",
-  "${ApiService.baseUrl.replaceAll('/api', '')}/uploads/events/default-event.png",
-  "${ApiService.baseUrl.replaceAll('/api', '')}/uploads/events/default-event.png",
-];
+    // Use local placeholders instead of via.placeholder.com
+    "${ApiService.baseUrl.replaceAll('/api', '')}/uploads/events/default-event.png",
+    "${ApiService.baseUrl.replaceAll('/api', '')}/uploads/events/default-event.png",
+    "${ApiService.baseUrl.replaceAll('/api', '')}/uploads/events/default-event.png",
+  ];
 
   // Deep purple color palette
   final Color primaryPurple = const Color(0xFF4A148C); // Deep Purple 900
@@ -1054,6 +1052,135 @@ Please RSVP soon!
     );
   }
 
+  // Implementation of the missing _buildCountdownTimer method
+  Widget _buildCountdownTimer() {
+    final now = DateTime.now();
+    final difference = eventDateTime.difference(now);
+    final isEventPassed = difference.isNegative;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      decoration: BoxDecoration(
+        color: primaryPurple,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: primaryPurple.withOpacity(0.3),
+            spreadRadius: 1,
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            isEventPassed ? "Event has ended" : "Event starts in",
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.white.withOpacity(0.9),
+            ),
+          ),
+          const SizedBox(height: 10),
+          isEventPassed
+              ? Text(
+                  "Event has already taken place",
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                )
+              : CountdownTimer(
+                  endTime: countdownEndTime,
+                  widgetBuilder: (_, time) {
+                    if (time == null) {
+                      return Text(
+                        "Event has started!",
+                        style: GoogleFonts.poppins(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      );
+                    }
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildCountdownUnit(time.days ?? 0, "Days"),
+                        _buildCountdownUnit(time.hours ?? 0, "Hours"),
+                        _buildCountdownUnit(time.min ?? 0, "Minutes"),
+                        _buildCountdownUnit(time.sec ?? 0, "Seconds"),
+                      ],
+                    );
+                  },
+                ),
+        ],
+      ),
+    );
+  }
+
+  // Implementation of the missing _buildCountdownUnit method
+  Widget _buildCountdownUnit(int value, String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              value.toString().padLeft(2, '0'),
+              style: GoogleFonts.poppins(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: primaryPurple,
+              ),
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.9),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Implementation of the missing _buildInfoChip method
+  Widget _buildInfoChip(IconData icon, String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1107,7 +1234,8 @@ Please RSVP soon!
         background: Stack(
           fit: StackFit.expand,
           children: [
-            ImageHelper.displayEventImage(widget.event['image_url'] ?? '', height: 250),
+            // Here's the fix: using 'eventImage' instead of 'image_url'
+            ImageHelper.displayEventImage(widget.event['eventImage'] ?? '', height: 250),
             // Gradient overlay for better text visibility
             Container(
               decoration: BoxDecoration(
@@ -1208,132 +1336,6 @@ Please RSVP soon!
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoChip(IconData icon, String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCountdownTimer() {
-    final now = DateTime.now();
-    final difference = eventDateTime.difference(now);
-    final isEventPassed = difference.isNegative;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(
-        color: primaryPurple,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: primaryPurple.withOpacity(0.3),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            isEventPassed ? "Event has ended" : "Event starts in",
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.white.withOpacity(0.9),
-            ),
-          ),
-          const SizedBox(height: 10),
-          isEventPassed
-              ? Text(
-                  "Event has already taken place",
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                )
-              : CountdownTimer(
-                  endTime: countdownEndTime,
-                  widgetBuilder: (_, time) {
-                    if (time == null) {
-                      return Text(
-                        "Event has started!",
-                        style: GoogleFonts.poppins(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      );
-                    }
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildCountdownUnit(time.days ?? 0, "Days"),
-                        _buildCountdownUnit(time.hours ?? 0, "Hours"),
-                        _buildCountdownUnit(time.min ?? 0, "Minutes"),
-                        _buildCountdownUnit(time.sec ?? 0, "Seconds"),
-                      ],
-                    );
-                  },
-                ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCountdownUnit(int value, String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              value.toString().padLeft(2, '0'),
-              style: GoogleFonts.poppins(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: primaryPurple,
-              ),
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: Colors.white.withOpacity(0.9),
-            ),
-          ),
         ],
       ),
     );

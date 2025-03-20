@@ -359,7 +359,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
             child: CircleAvatar(
               radius: 50,
               backgroundColor: accentColor,
-              backgroundImage: hasProfileImage ? NetworkImage(profileImageUrl!) : null,
+              backgroundImage: hasProfileImage ? NetworkImage(profileImageUrl) : null,
               child: !hasProfileImage ? Text(
                 vendorInitials,
                 style: const TextStyle(

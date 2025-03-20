@@ -439,7 +439,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             print("Image uploaded successfully: $imageUrl");
 
             // Update event with image URL if upload was successful
-            if (imageUrl != null && imageUrl.isNotEmpty) {
+            if (imageUrl.isNotEmpty) {
               await _eventService.updateEvent(createdEvent["_id"], {
                 'eventImage': imageUrl,
               });
