@@ -24,7 +24,7 @@ class _AdminVendorDetailScreenState extends State<AdminVendorDetailScreen> with 
   List<dynamic> _vendorServices = [];
   String? _errorMessage;
   late TabController _tabController;
-  final String baseUrl = 'http://192.168.29.168:3000/api';
+  final String baseUrl = 'http://192.168.254.140:3000/api';
 
   @override
   void initState() {

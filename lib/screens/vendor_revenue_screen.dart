@@ -40,7 +40,7 @@ class _VendorRevenueScreenState extends State<VendorRevenueScreen> {
       }
       
       final response = await http.get(
-        Uri.parse('http://192.168.29.168:3000/api/vendor/revenue?period=$selectedPeriod'),
+        Uri.parse('http://192.168.254.140:3000/api/vendor/revenue?period=$selectedPeriod'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

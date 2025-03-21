@@ -71,7 +71,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       }
       
       final response = await http.get(
-        Uri.parse('http://192.168.29.168:3000/api/auth/me'),
+        Uri.parse('http://192.168.254.140:3000/api/auth/me'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -145,7 +145,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           : profilePicture;
       
       final response = await http.put(
-        Uri.parse('http://192.168.29.168:3000/api/auth/update-profile'),
+        Uri.parse('http://192.168.254.140:3000/api/auth/update-profile'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

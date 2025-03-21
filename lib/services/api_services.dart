@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // Base URL for your API - update this to your actual backend URL
-  static const String baseUrl = 'http://192.168.29.168:3000/api';
+  static const String baseUrl = 'http://192.168.254.140:3000/api';
   
   // Get the auth token from shared preferences
   static Future<String?> getToken() async {

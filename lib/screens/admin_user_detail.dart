@@ -23,7 +23,7 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> with Sing
   List<dynamic> _userBookings = [];
   String? _errorMessage;
   late TabController _tabController;
-  final String baseUrl = 'http://192.168.29.168:3000/api';
+  final String baseUrl = 'http://192.168.254.140:3000/api';
 
   @override
   void initState() {

@@ -22,7 +22,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
   final Color primaryLightColor = Colors.deepPurple[100]!;
   
   // Base API URL - change this to your actual API URL
-  final String baseApiUrl = 'http://192.168.29.168:3000/api';
+  final String baseApiUrl = 'http://192.168.254.140:3000/api';
   
   // State variables
   List<Map<String, dynamic>> services = [];
@@ -214,7 +214,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
             // Fix the mediaUrl to include the full base URL if it's a relative path
             String mediaUrl = item['mediaUrl'];
             if (mediaUrl.startsWith('/uploads/')) {
-              mediaUrl = 'http://192.168.29.168:3000$mediaUrl';
+              mediaUrl = 'http://192.168.254.140:3000$mediaUrl';
             }
             
             return {
@@ -888,7 +888,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                     // Fix the mediaUrl to include the full base URL if it's a relative path
                     String mediaUrl = newItem['mediaUrl'];
                     if (mediaUrl.startsWith('/uploads/')) {
-                      mediaUrl = 'http://192.168.29.168:3000$mediaUrl';
+                      mediaUrl = 'http://192.168.254.140:3000$mediaUrl';
                     }
                     
                     setState(() {
@@ -1070,7 +1070,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                       // Fix the mediaUrl to include the full base URL if it's a relative path
                       String mediaUrl = newItem['mediaUrl'];
                       if (mediaUrl.startsWith('/uploads/')) {
-                        mediaUrl = 'http://192.168.29.168:3000$mediaUrl';
+                        mediaUrl = 'http://192.168.254.140:3000$mediaUrl';
                       }
                       
                       setState(() {
