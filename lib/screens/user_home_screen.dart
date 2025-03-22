@@ -112,6 +112,72 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // Updated method to delete an event from backend
+  Future<void> _deleteEvent(Map<String, dynamic> event) async {
+    try {
+      setState(() => isLoading = true);
+      
+      // Get the event ID
+      final eventId = event['id'];
+      if (eventId == null) {
+        throw Exception("Event ID is missing");
+      }
+      
+      // Call the API to delete the event
+      final result = await _eventService.deleteEvent(eventId);
+      
+      if (result == true) {
+        // Refresh the events list
+        await _loadEvents();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Event '${event['name']}' deleted successfully"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        throw Exception("Failed to delete event");
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error deleting event: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Add this method to show delete confirmation dialog
+  void _showDeleteConfirmationDialog(Map<String, dynamic> event) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete Event"),
+        content: Text("Are you sure you want to delete '${event['name']}'?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("No"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteEvent(event);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text("Yes"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -238,27 +304,26 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-         // In your HomeScreen class, update the notification icon's onTap:
-Container(
-  padding: const EdgeInsets.all(8),
-  decoration: BoxDecoration(
-    color: Colors.white.withOpacity(0.2),
-    borderRadius: BorderRadius.circular(12),
-  ),
-  child: GestureDetector(
-    onTap: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const NotificationScreen()),
-      );
-    },
-    child: const Icon(
-      Icons.notifications_outlined,
-      size: 28,
-      color: Colors.white,
-    ),
-  ),
-),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const NotificationScreen()),
+                );
+              },
+              child: const Icon(
+                Icons.notifications_outlined,
+                size: 28,
+                color: Colors.white,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -584,12 +649,36 @@ Container(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ClipRRect(
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(16),
-                              topRight: Radius.circular(16),
-                            ),
-                            child: ImageHelper.displayEventImage(event['eventImage']),
+                          Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(16),
+                                  topRight: Radius.circular(16),
+                                ),
+                                child: ImageHelper.displayEventImage(event['eventImage']),
+                              ),
+                              // Add delete button in the top-right corner
+                              Positioned(
+                                top: 10,
+                                right: 10,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.5),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    onPressed: () => _showDeleteConfirmationDialog(event),
+                                    tooltip: "Delete Event",
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           Padding(
                             padding: const EdgeInsets.all(16.0),

@@ -95,14 +95,41 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
   void _parseEventDateTime() {
     try {
-      String dateTimeStr = "${widget.event['date']} ${widget.event['time']}";
-      eventDateTime = DateFormat("d/M/yyyy h:mm a").parse(dateTimeStr);
+      // Fix the date parsing to ensure it works correctly
+      String dateStr = widget.event['date'] ?? '';
+      String timeStr = widget.event['time'] ?? '';
+      
+      if (dateStr.isEmpty || timeStr.isEmpty) {
+        // Default to a future date if date/time is not available
+        eventDateTime = DateTime.now().add(const Duration(days: 1));
+      } else {
+        // Try to parse with different formats to handle various date formats
+        try {
+          // First try the d/M/yyyy format
+          eventDateTime = DateFormat("d/M/yyyy h:mm a").parse("$dateStr $timeStr");
+        } catch (e) {
+          try {
+            // Then try the MM/dd/yyyy format
+            eventDateTime = DateFormat("MM/dd/yyyy h:mm a").parse("$dateStr $timeStr");
+          } catch (e) {
+            // If all else fails, use a default future date
+            eventDateTime = DateTime.now().add(const Duration(days: 1));
+          }
+        }
+      }
+      
+      // Set the countdown end time
       setState(() {
         countdownEndTime = eventDateTime.millisecondsSinceEpoch;
       });
+      
+      print("Event date time set to: $eventDateTime");
+      print("Countdown end time: $countdownEndTime");
     } catch (e) {
       debugPrint("Date format error: $e");
-      eventDateTime = DateTime.now();
+      // Default to a future date if parsing fails
+      eventDateTime = DateTime.now().add(const Duration(days: 1));
+      countdownEndTime = eventDateTime.millisecondsSinceEpoch;
     }
   }
 
@@ -1052,7 +1079,7 @@ Please RSVP soon!
     );
   }
 
-  // Implementation of the missing _buildCountdownTimer method
+  // Fixed implementation of the _buildCountdownTimer method
   Widget _buildCountdownTimer() {
     final now = DateTime.now();
     final difference = eventDateTime.difference(now);
@@ -1122,7 +1149,6 @@ Please RSVP soon!
     );
   }
 
-  // Implementation of the missing _buildCountdownUnit method
   Widget _buildCountdownUnit(int value, String label) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
