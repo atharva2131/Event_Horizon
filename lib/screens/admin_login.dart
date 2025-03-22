@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'admin_dashboard.dart';
+import 'api_service.dart';
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -24,14 +24,34 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   final _formKey = GlobalKey<FormState>();
 
   @override
+  void initState() {
+    super.initState();
+    _checkExistingSession();
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  // API URL - Replace with your actual API URL
-  final String baseUrl = 'http://192.168.29.168:3000/api';
+  // Check if user is already logged in
+  Future<void> _checkExistingSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('adminToken');
+    
+    if (token != null) {
+      // Token exists, navigate to dashboard
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const AdminDashboardScreen(),
+        ),
+      );
+    }
+  }
 
   // Admin Sign In API Call
   Future<void> _signIn() async {
@@ -43,27 +63,12 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     });
 
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/admin/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': _emailController.text.trim(),
-          'password': _passwordController.text,
-        }),
+      final result = await ApiService.adminLogin(
+        _emailController.text.trim(),
+        _passwordController.text,
       );
-
-      final responseData = jsonDecode(response.body);
       
-      if (response.statusCode == 200) {
-        // Save auth token to shared preferences
-        final prefs = await SharedPreferences.getInstance();
-        prefs.setString('adminToken', responseData['token']);
-        
-        // Save admin data if available
-        if (responseData.containsKey('admin')) {
-          prefs.setString('adminData', jsonEncode(responseData['admin']));
-        }
-
+      if (result['success']) {
         // Navigate to admin dashboard
         if (!mounted) return;
         Navigator.pushReplacement(
@@ -75,7 +80,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       } else {
         // Handle error
         setState(() {
-          _errorMessage = responseData['msg'] ?? 'Login failed. Please check your credentials.';
+          _errorMessage = result['message'];
         });
       }
     } catch (e) {

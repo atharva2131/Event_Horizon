@@ -85,7 +85,7 @@ class _AdminReportScreenState extends State<AdminReportScreen> with SingleTicker
           _buildVendorPerformanceTab(),
         ],
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
+     
     );
   }
 

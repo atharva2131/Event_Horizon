@@ -1,8 +1,15 @@
-// admin_dashboard_screen.dart
+import 'dart:convert';
+import 'package:eventhorizon/screens/admin_bookings.dart';
+import 'package:eventhorizon/screens/admin_payments.dart';
+import 'package:eventhorizon/screens/admin_users.dart';
+import 'package:eventhorizon/screens/admin_vendors.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:eventhorizon/screens/admin_reports_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'api_service.dart';
+import 'admin_login.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -12,7 +19,7 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  bool _isLoading = false;
+  bool _isLoading = true;
   String _adminName = "Admin User";
   Map<String, dynamic> _dashboardData = {};
   int _selectedIndex = 0;
@@ -20,54 +27,91 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _loadAdminData();
     _loadDashboardData();
   }
 
-  void _loadDashboardData() {
-    // Mock dashboard data
-    _dashboardData = {
-      'totalUsers': 1245,
-      'activeVendors': 87,
-      'pendingBookings': 32,
-      'totalRevenue': 245000,
-      'monthlyRevenue': [15000, 22000, 18500, 25000, 30000, 28000, 35000, 40000, 38000, 42000, 45000, 50000],
-      'recentActivities': [
-        {
-          'type': 'user',
-          'title': 'New User Registration',
-          'description': 'John Doe registered as a new user',
-          'time': '2 hours ago'
-        },
-        {
-          'type': 'vendor',
-          'title': 'Vendor Approved',
-          'description': 'Elegant Events was approved as a vendor',
-          'time': '3 hours ago'
-        },
-        {
-          'type': 'booking',
-          'title': 'New Booking',
-          'description': 'Wedding ceremony booked at Grand Plaza',
-          'time': '5 hours ago'
-        },
-        {
-          'type': 'payment',
-          'title': 'Payment Received',
-          'description': '₹25,000 received for booking #1234',
-          'time': '6 hours ago'
-        },
-        {
-          'type': 'user',
-          'title': 'User Profile Updated',
-          'description': 'Sarah Johnson updated her profile information',
-          'time': '8 hours ago'
-        }
-      ]
-    };
-    
+  Future<void> _loadAdminData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final adminDataString = prefs.getString('adminData');
+      
+      if (adminDataString != null) {
+        final adminData = jsonDecode(adminDataString);
+        setState(() {
+          _adminName = adminData['name'] ?? 'Admin User';
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading admin data: $e');
+    }
+  }
+
+  Future<void> _loadDashboardData() async {
     setState(() {
-      _isLoading = false;
+      _isLoading = true;
     });
+
+    try {
+      // Try to fetch dashboard data from API
+      final data = await ApiService.fetchDashboardData();
+      
+      if (mounted) {
+        setState(() {
+          _dashboardData = data;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching dashboard data: $e');
+      
+      // Fallback to mock data if API fails
+      _dashboardData = {
+        'totalUsers': 1245,
+        'activeVendors': 87,
+        'pendingBookings': 32,
+        'totalRevenue': 245000,
+        'monthlyRevenue': [15000, 22000, 18500, 25000, 30000, 28000, 35000, 40000, 38000, 42000, 45000, 50000],
+        'recentActivities': [
+          {
+            'type': 'user',
+            'title': 'New User Registration',
+            'description': 'John Doe registered as a new user',
+            'time': '2 hours ago'
+          },
+          {
+            'type': 'vendor',
+            'title': 'Vendor Approved',
+            'description': 'Elegant Events was approved as a vendor',
+            'time': '3 hours ago'
+          },
+          {
+            'type': 'booking',
+            'title': 'New Booking',
+            'description': 'Wedding ceremony booked at Grand Plaza',
+            'time': '5 hours ago'
+          },
+          {
+            'type': 'payment',
+            'title': 'Payment Received',
+            'description': '₹25,000 received for booking #1234',
+            'time': '6 hours ago'
+          },
+          {
+            'type': 'user',
+            'title': 'User Profile Updated',
+            'description': 'Sarah Johnson updated her profile information',
+            'time': '8 hours ago'
+          }
+        ]
+      };
+      
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _onItemTapped(int index) {
@@ -85,36 +129,59 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     });
   }
 
+  // Get the appropriate screen based on the selected index
+  Widget _getScreenForIndex(int index) {
+    switch (index) {
+      case 0:
+        return _buildDashboardContent();
+      case 1:
+        // Navigate to Users screen
+        return const AdminUsersScreen();
+      case 2:
+        // Navigate to Bookings screen
+        return const AdminBookingsScreen();
+      case 3:
+        // Navigate to Payments screen
+        return const AdminPaymentsScreen();
+      case 4:
+        // Navigate to Payments screen
+        return const AdminReportScreen();
+      default:
+        return _buildDashboardContent();
+    }
+  }
+
   Future<void> _signOut() async {
-    // In a real app, this would clear authentication tokens
-    // Navigate to login screen
+    try {
+      await ApiService.logout();
+      
+      if (!mounted) return;
+      
+      // Navigate to login screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AdminLoginScreen()),
+      );
+    } catch (e) {
+      debugPrint('Error signing out: $e');
+      
+      // Still navigate to login screen even if API call fails
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AdminLoginScreen()),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        elevation: 0,
-        title: Text(
-          'EventHorizon Admin',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _signOut,
-            tooltip: 'Sign Out',
-          ),
-        ],
-      ),
+      
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _buildDashboardContent(),
+          : _getScreenForIndex(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
@@ -133,10 +200,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             icon: Icon(Icons.people),
             label: 'Users',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.store),
-            label: 'Vendors',
-          ),
+         
           BottomNavigationBarItem(
             icon: Icon(Icons.event),
             label: 'Bookings',
@@ -669,3 +733,4 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 }
+

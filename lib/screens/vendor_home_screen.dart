@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path/path.dart' as path;
 import 'package:http_parser/http_parser.dart';
+import 'service_cover_photo.dart'; // Import the new file
 
 class VendorHomeScreen extends StatefulWidget {
   const VendorHomeScreen({super.key});
@@ -22,7 +23,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
   final Color primaryLightColor = Colors.deepPurple[100]!;
   
   // Base API URL - change this to your actual API URL
-  final String baseApiUrl = 'http://192.168.29.168:3000/api';
+  final String baseApiUrl = 'http://192.168.254.140:3000/api';
   
   // State variables
   List<Map<String, dynamic>> services = [];
@@ -44,6 +45,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
   final TextEditingController _portfolioUrlController = TextEditingController();
 
   final ImagePicker _picker = ImagePicker();
+  late ServiceCoverPhotoManager _coverPhotoManager;
 
   bool _isEditing = false;
   String? _selectedServiceId;
@@ -71,6 +73,10 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
   @override
   void initState() {
     super.initState();
+    _coverPhotoManager = ServiceCoverPhotoManager(
+      baseApiUrl: baseApiUrl,
+      primaryColor: primaryColor,
+    );
     _loadVendorProfile();
     _loadServices();
     _loadPortfolio();
@@ -148,6 +154,12 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
         
         setState(() {
           services = servicesData.map((service) {
+            // Fix the coverPhotoUrl to include the full base URL if it's a relative path
+            String? coverPhotoUrl = service['coverPhotoUrl'];
+            if (coverPhotoUrl != null && coverPhotoUrl.startsWith('/uploads/')) {
+              coverPhotoUrl = 'http://192.168.254.140:3000$coverPhotoUrl';
+            }
+            
             // Transform API data to match our UI structure
             return {
               "id": service['_id'],
@@ -159,6 +171,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
               "rating": service['averageRating'] ?? 0.0,
               "reviews": service['totalReviews'] ?? 0,
               "pricing": service['pricing'] ?? [],
+              "coverPhotoUrl": coverPhotoUrl, // Add cover photo URL
             };
           }).toList();
           isServicesLoading = false;
@@ -214,7 +227,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
             // Fix the mediaUrl to include the full base URL if it's a relative path
             String mediaUrl = item['mediaUrl'];
             if (mediaUrl.startsWith('/uploads/')) {
-              mediaUrl = 'http://192.168.29.168:3000$mediaUrl';
+              mediaUrl = 'http://192.168.254.140:3000$mediaUrl';
             }
             
             return {
@@ -272,6 +285,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
         "pricing": [
           {"name": "Basic", "price": 299, "description": "Basic package"}
         ],
+        "coverPhotoUrl": null, // No cover photo for mock data
       },
       {
         "id": "mock2",
@@ -285,6 +299,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
         "pricing": [
           {"name": "Standard", "price": 199, "description": "Standard package"}
         ],
+        "coverPhotoUrl": null, // No cover photo for mock data
       },
       {
         "id": "mock3",
@@ -298,6 +313,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
         "pricing": [
           {"name": "Basic", "price": 149, "description": "Basic package"}
         ],
+        "coverPhotoUrl": null, // No cover photo for mock data
       },
     ];
   }
@@ -428,6 +444,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
             "rating": 0.0,
             "reviews": 0,
             "pricing": newService['pricing'] ?? [],
+            "coverPhotoUrl": null, // New service has no cover photo yet
           });
         });
         
@@ -469,6 +486,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
               "description": "Standard package"
             }
           ],
+          "coverPhotoUrl": null, // New service has no cover photo yet
         });
       });
       
@@ -888,7 +906,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                     // Fix the mediaUrl to include the full base URL if it's a relative path
                     String mediaUrl = newItem['mediaUrl'];
                     if (mediaUrl.startsWith('/uploads/')) {
-                      mediaUrl = 'http://192.168.29.168:3000$mediaUrl';
+                      mediaUrl = 'http://192.168.254.140:3000$mediaUrl';
                     }
                     
                     setState(() {
@@ -1070,7 +1088,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                       // Fix the mediaUrl to include the full base URL if it's a relative path
                       String mediaUrl = newItem['mediaUrl'];
                       if (mediaUrl.startsWith('/uploads/')) {
-                        mediaUrl = 'http://192.168.29.168:3000$mediaUrl';
+                        mediaUrl = 'http://192.168.254.140:3000$mediaUrl';
                       }
                       
                       setState(() {
@@ -1505,6 +1523,22 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                 ),
               ],
             ),
+          ),
+          
+          // NEW: Service Cover Photo
+          ServiceCoverPhoto(
+            serviceId: serviceId,
+            serviceName: service["title"],
+            coverPhotoUrl: service["coverPhotoUrl"],
+            isLocal: service["isLocalCoverPhoto"] == true,
+            primaryColor: primaryColor,
+            coverPhotoManager: _coverPhotoManager,
+            onCoverPhotoUpdated: (result) {
+              setState(() {
+                services[index]["coverPhotoUrl"] = result['coverPhotoUrl'];
+                services[index]["isLocalCoverPhoto"] = result['isLocal'] == true;
+              });
+            },
           ),
           
           // Service details
@@ -1953,3 +1987,4 @@ class _ProfileStat extends StatelessWidget {
     );
   }
 }
+

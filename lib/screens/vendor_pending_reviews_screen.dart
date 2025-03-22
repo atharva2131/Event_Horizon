@@ -38,7 +38,7 @@ class _VendorPendingReviewsScreenState extends State<VendorPendingReviewsScreen>
       }
       
       final response = await http.get(
-        Uri.parse('http://192.168.29.168:3000/api/vendor/reviews/pending'),
+        Uri.parse('http://192.168.254.140:3000/api/vendor/reviews/pending'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
-  final String baseUrl = 'http://192.168.29.168:3000/api';
+  final String baseUrl = 'http://192.168.254.140:3000/api';
   
   // Check if the user is an admin
   Future<bool> isAdmin() async {

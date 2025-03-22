@@ -63,7 +63,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
       
       // Use the correct API URL
       final response = await http.get(
-        Uri.parse('http://192.168.29.168:3000/api/auth/me'),
+        Uri.parse('http://192.168.254.140:3000/api/auth/me'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -128,7 +128,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
       
       // Use the correct API URL and method
       final response = await http.put(
-        Uri.parse('http://192.168.29.168:3000/api/auth/update-profile'),
+        Uri.parse('http://192.168.254.140:3000/api/auth/update-profile'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -174,7 +174,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
       if (token != null) {
         try {
           await http.post(
-            Uri.parse('http://192.168.29.168:3000/api/auth/logout'),
+            Uri.parse('http://192.168.254.140:3000/api/auth/logout'),
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer $token',

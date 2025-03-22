@@ -98,7 +98,7 @@ const initializeServer = async () => {
   
   // Start the server
   server.listen(PORT, () => {
-    console.log(`🚀 Server running on http://192.168.29.168:${PORT}`);
+    console.log(`🚀 Server running on http://192.168.254.140:${PORT}`);
   });
 };
 

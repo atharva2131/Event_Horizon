@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 import 'admin_user_detail.dart';
+import 'api_service.dart';
 
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
@@ -18,7 +18,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   String? _errorMessage;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
-  final String baseUrl = 'http://localhost:3000/api/auth/users';
 
   @override
   void initState() {
@@ -39,78 +38,140 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     });
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('adminToken');
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/admin/users'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+      // Use the API service to fetch users
+      final users = await ApiService.fetchUsers();
+      
+      if (mounted) {
         setState(() {
-          _users = data['users'] ?? [];
-          _isLoading = false;
-        });
-      } else {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _errorMessage = data['msg'] ?? 'Failed to load users';
+          _users = users;
           _isLoading = false;
         });
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Network error: ${e.toString()}';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _toggleUserStatus(String userId, bool isActive) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('adminToken');
+      await ApiService.toggleUserStatus(userId, isActive);
+      
+      if (mounted) {
+        setState(() {
+          for (var i = 0; i < _users.length; i++) {
+            if (_users[i]['_id'] == userId) {
+              _users[i]['isActive'] = !isActive;
+              break;
+            }
+          }
+        });
 
-      final response = await http.patch(
-        Uri.parse('$baseUrl/admin/users/$userId/status'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'isActive': !isActive,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        _fetchUsers(); // Refresh the list
+        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('User status updated successfully'),
             backgroundColor: Colors.green,
           ),
         );
-      } else {
-        final data = jsonDecode(response.body);
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(data['msg'] ?? 'Failed to update user status'),
+            content: Text('Failed to update user status: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
       }
+    }
+  }
+
+  Future<void> _changeUserRole(String userId, String currentRole) async {
+    // Show dialog to select new role
+    final String? newRole = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Change User Role'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Current role: $currentRole'),
+              const SizedBox(height: 16),
+              const Text('Select new role:'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'user'),
+              child: const Text('User'),
+              style: TextButton.styleFrom(
+                foregroundColor: currentRole == 'user' ? Colors.grey : Colors.deepPurple,
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'vendor'),
+              child: const Text('Vendor'),
+              style: TextButton.styleFrom(
+                foregroundColor: currentRole == 'vendor' ? Colors.grey : Colors.deepPurple,
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'admin'),
+              child: const Text('Admin'),
+              style: TextButton.styleFrom(
+                foregroundColor: currentRole == 'admin' ? Colors.grey : Colors.deepPurple,
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // If no role selected or same role selected, do nothing
+    if (newRole == null || newRole == currentRole) return;
+
+    try {
+      // Call API to change role
+      await ApiService.changeUserRole(userId, newRole);
+      
+      // Update local state
+      if (mounted) {
+        setState(() {
+          for (var i = 0; i < _users.length; i++) {
+            if (_users[i]['_id'] == userId) {
+              _users[i]['role'] = newRole;
+              break;
+            }
+          }
+        });
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('User role changed to $newRole successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Network error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to change user role: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -122,10 +183,26 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       final name = user['name']?.toString().toLowerCase() ?? '';
       final email = user['email']?.toString().toLowerCase() ?? '';
       final phone = user['phone']?.toString() ?? '';
+      final role = user['role']?.toString().toLowerCase() ?? '';
       return name.contains(_searchQuery.toLowerCase()) || 
              email.contains(_searchQuery.toLowerCase()) ||
-             phone.contains(_searchQuery);
+             phone.contains(_searchQuery) ||
+             role.contains(_searchQuery.toLowerCase());
     }).toList();
+  }
+
+  // Get role badge color
+  Color _getRoleBadgeColor(String role) {
+    switch (role) {
+      case 'admin':
+        return Colors.purple;
+      case 'vendor':
+        return Colors.blue;
+      case 'user':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
   }
 
   @override
@@ -180,7 +257,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                   },
                                 )
                               : null,
-                          hintText: 'Search users by name, email or phone',
+                          hintText: 'Search users by name, email, phone or role',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -215,7 +292,31 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       ),
                     ),
                     
-                    const SizedBox(height: 16),
+                    // Role stats
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          _statCard(
+                            'Admins', 
+                            _users.where((user) => user['role'] == 'admin').length.toString(),
+                            Colors.purple,
+                          ),
+                          const SizedBox(width: 8),
+                          _statCard(
+                            'Vendors', 
+                            _users.where((user) => user['role'] == 'vendor').length.toString(),
+                            Colors.blue,
+                          ),
+                          const SizedBox(width: 8),
+                          _statCard(
+                            'Regular Users', 
+                            _users.where((user) => user['role'] == 'user').length.toString(),
+                            Colors.green,
+                          ),
+                        ],
+                      ),
+                    ),
                     
                     // Users list
                     Expanded(
@@ -233,6 +334,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                               itemCount: _filteredUsers.length,
                               itemBuilder: (context, index) {
                                 final user = _filteredUsers[index];
+                                final userRole = user['role'] ?? 'user';
+                                
                                 return Card(
                                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                   shape: RoundedRectangleBorder(
@@ -255,11 +358,32 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                         ),
                                       ),
                                     ),
-                                    title: Text(
-                                      user['name'] ?? 'Unknown',
-                                      style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                    title: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            user['name'] ?? 'Unknown',
+                                            style: GoogleFonts.poppins(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: _getRoleBadgeColor(userRole).withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            userRole.toUpperCase(),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: _getRoleBadgeColor(userRole),
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     subtitle: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,6 +395,15 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                     trailing: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
+                                        // Role change button
+                                        IconButton(
+                                          icon: const Icon(Icons.manage_accounts),
+                                          tooltip: 'Change Role',
+                                          onPressed: () {
+                                            _changeUserRole(user['_id'], userRole);
+                                          },
+                                        ),
+                                        // Status toggle
                                         Switch(
                                           value: user['isActive'] == true,
                                           activeColor: Colors.deepPurple,
@@ -278,6 +411,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                             _toggleUserStatus(user['_id'], user['isActive'] == true);
                                           },
                                         ),
+                                        // Details button
                                         IconButton(
                                           icon: const Icon(Icons.navigate_next),
                                           onPressed: () {

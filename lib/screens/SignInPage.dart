@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'package:eventhorizon/screens/user_dashboard.dart';
 import 'package:eventhorizon/screens/vendor_dashboard.dart';
-import 'package:eventhorizon/screens/admin_dashboard.dart'; // Import admin dashboard
+import 'package:eventhorizon/screens/admin_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'api_service.dart';
 
 class SignInPage extends StatefulWidget {
   final bool isUser; // To differentiate User or Vendor
@@ -33,6 +34,12 @@ class _SignInPageState extends State<SignInPage> {
   final _signUpFormKey = GlobalKey<FormState>();
 
   @override
+  void initState() {
+    super.initState();
+    _checkExistingSession();
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -41,8 +48,49 @@ class _SignInPageState extends State<SignInPage> {
     super.dispose();
   }
 
+  // Check if user is already logged in
+  Future<void> _checkExistingSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final userData = prefs.getString('userData');
+    
+    if (token != null && userData != null) {
+      try {
+        final user = jsonDecode(userData);
+        
+        if (!mounted) return;
+        
+        // Navigate to appropriate dashboard based on role
+        if (user['role'] == 'admin') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AdminDashboardScreen(),
+            ),
+          );
+        } else if (user['role'] == 'vendor') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const VendorDashboard(),
+            ),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const UserDashboard(),
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint('Error parsing user data: $e');
+      }
+    }
+  }
+
   // API URL - Replace with your actual API URL
-  final String baseUrl = 'http://192.168.29.168:3000/api';
+  final String baseUrl = 'http://192.168.254.140:3000/api';
 
   // Sign In API Call
   Future<void> _signIn() async {
@@ -87,6 +135,9 @@ class _SignInPageState extends State<SignInPage> {
           // Check if the user is an admin regardless of which login form they used
           final userData = responseData['user'];
           if (userData != null && userData['role'] == 'admin') {
+            // Save admin token separately
+            prefs.setString('adminToken', responseData['token']);
+            
             // Redirect to admin dashboard if user is an admin
             if (!mounted) return;
             Navigator.pushReplacement(
@@ -364,7 +415,7 @@ class _SignInPageState extends State<SignInPage> {
         }
         
         if (label == 'Email') {
-          final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+          final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
           if (!emailRegex.hasMatch(value)) {
             return 'Please enter a valid email address';
           }

@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'api_service.dart';
+
 
 class AdminUserDetailScreen extends StatefulWidget {
   final String userId;
@@ -23,7 +23,8 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> with Sing
   List<dynamic> _userBookings = [];
   String? _errorMessage;
   late TabController _tabController;
-  final String baseUrl = 'http://192.168.29.168:3000/api';
+  final TextEditingController _notesController = TextEditingController();
+  bool _isSavingNotes = false;
 
   @override
   void initState() {
@@ -35,6 +36,7 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> with Sing
   @override
   void dispose() {
     _tabController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
@@ -45,79 +47,178 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> with Sing
     });
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('adminToken');
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/admin/users/${widget.userId}'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+      // Fetch user data using API service
+      final userData = await ApiService.fetchUserById(widget.userId);
+      
+      // Fetch user bookings if needed
+      List<dynamic> bookings = [];
+      try {
+        bookings = await ApiService.fetchUserBookings(widget.userId);
+      } catch (e) {
+        // Silently handle booking fetch errors
+        debugPrint('Error fetching bookings: $e');
+      }
+      
+      if (mounted) {
         setState(() {
-          _userData = data['user'] ?? {};
-          _userBookings = data['bookings'] ?? [];
-          _isLoading = false;
-        });
-      } else {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _errorMessage = data['msg'] ?? 'Failed to load user data';
+          _userData = userData;
+          _userBookings = bookings;
+          _notesController.text = userData['adminNotes'] ?? '';
           _isLoading = false;
         });
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Network error: ${e.toString()}';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _toggleUserStatus() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('adminToken');
-
-      final response = await http.patch(
-        Uri.parse('$baseUrl/admin/users/${widget.userId}/status'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'isActive': !(_userData['isActive'] == true),
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        _fetchUserData(); // Refresh the data
+      await ApiService.toggleUserStatus(widget.userId, _userData['isActive'] == true);
+      
+      if (mounted) {
+        setState(() {
+          _userData['isActive'] = !(_userData['isActive'] == true);
+        });
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('User status updated successfully'),
             backgroundColor: Colors.green,
           ),
         );
-      } else {
-        final data = jsonDecode(response.body);
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(data['msg'] ?? 'Failed to update user status'),
+            content: Text('Failed to update user status: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
       }
+    }
+  }
+
+  Future<void> _changeUserRole() async {
+    final currentRole = _userData['role'] ?? 'user';
+    
+    // Show dialog to select new role
+    final String? newRole = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Change User Role'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Current role: $currentRole'),
+              const SizedBox(height: 16),
+              const Text('Select new role:'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'user'),
+              child: const Text('User'),
+              style: TextButton.styleFrom(
+                foregroundColor: currentRole == 'user' ? Colors.grey : Colors.deepPurple,
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'vendor'),
+              child: const Text('Vendor'),
+              style: TextButton.styleFrom(
+                foregroundColor: currentRole == 'vendor' ? Colors.grey : Colors.deepPurple,
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'admin'),
+              child: const Text('Admin'),
+              style: TextButton.styleFrom(
+                foregroundColor: currentRole == 'admin' ? Colors.grey : Colors.deepPurple,
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // If no role selected or same role selected, do nothing
+    if (newRole == null || newRole == currentRole) return;
+
+    try {
+      // Call API to change role
+      await ApiService.changeUserRole(widget.userId, newRole);
+      
+      // Update local state
+      if (mounted) {
+        setState(() {
+          _userData['role'] = newRole;
+        });
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('User role changed to $newRole successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Network error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to change user role: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveNotes() async {
+    if (_isSavingNotes) return;
+    
+    setState(() {
+      _isSavingNotes = true;
+    });
+    
+    try {
+      await ApiService.updateUserNotes(widget.userId, _notesController.text);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Notes saved successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save notes: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSavingNotes = false;
+        });
+      }
     }
   }
 
@@ -144,44 +245,43 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> with Sing
 
     if (confirm) {
       try {
-        final prefs = await SharedPreferences.getInstance();
-        final token = prefs.getString('adminToken');
-
-        final response = await http.delete(
-          Uri.parse('$baseUrl/admin/users/${widget.userId}'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
+        await ApiService.deleteUser(widget.userId);
+        
+        if (!mounted) return;
+        
+        // Show success message and navigate back
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('User deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
         );
-
-        if (response.statusCode == 200) {
-          // Pop back to users list
-          if (!mounted) return;
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('User deleted successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else {
-          final data = jsonDecode(response.body);
+        
+        Navigator.pop(context);
+      } catch (e) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(data['msg'] ?? 'Failed to delete user'),
+              content: Text('Failed to delete user: ${e.toString()}'),
               backgroundColor: Colors.red,
             ),
           );
         }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Network error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
       }
+    }
+  }
+
+  // Get role badge color
+  Color _getRoleBadgeColor(String role) {
+    switch (role) {
+      case 'admin':
+        return Colors.purple;
+      case 'vendor':
+        return Colors.blue;
+      case 'user':
+        return Colors.green;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -255,6 +355,7 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> with Sing
     final createdAt = _userData['createdAt'] != null 
         ? dateFormatter.format(DateTime.parse(_userData['createdAt']))
         : 'Unknown';
+    final userRole = _userData['role'] ?? 'user';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -306,6 +407,7 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> with Sing
                         const SizedBox(height: 8),
                         Row(
                           children: [
+                            // Status badge
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
@@ -323,14 +425,30 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> with Sing
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Text(
-                              'Joined: $createdAt',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                color: Colors.grey[700],
+                            // Role badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: _getRoleBadgeColor(userRole).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                userRole.toUpperCase(),
+                                style: TextStyle(
+                                  color: _getRoleBadgeColor(userRole),
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Joined: $createdAt',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Colors.grey[700],
+                          ),
                         ),
                       ],
                     ),
@@ -342,26 +460,47 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> with Sing
           
           const SizedBox(height: 16),
           
-          // Toggle status button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _toggleUserStatus,
-              icon: Icon(
-                _userData['isActive'] == true ? Icons.block : Icons.check_circle,
-              ),
-              label: Text(
-                _userData['isActive'] == true ? 'Deactivate User' : 'Activate User',
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _userData['isActive'] == true ? Colors.red : Colors.green,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          // Action buttons
+          Row(
+            children: [
+              // Toggle status button
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _toggleUserStatus,
+                  icon: Icon(
+                    _userData['isActive'] == true ? Icons.block : Icons.check_circle,
+                  ),
+                  label: Text(
+                    _userData['isActive'] == true ? 'Deactivate' : 'Activate',
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _userData['isActive'] == true ? Colors.red : Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(width: 12),
+              // Change role button
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _changeUserRole,
+                  icon: const Icon(Icons.manage_accounts),
+                  label: const Text('Change Role'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           
           const SizedBox(height: 24),
@@ -373,6 +512,7 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> with Sing
           _detailItem('Name', _userData['name'] ?? 'Not provided'),
           _detailItem('Email', _userData['email'] ?? 'Not provided'),
           _detailItem('Phone', _userData['phone'] ?? 'Not provided'),
+          _detailItem('Role', userRole.toUpperCase()),
           _detailItem('Created At', createdAt),
           _detailItem('Last Login', _userData['lastLogin'] != null 
               ? dateFormatter.format(DateTime.parse(_userData['lastLogin']))
@@ -407,6 +547,7 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> with Sing
               borderRadius: BorderRadius.circular(12),
             ),
             child: TextField(
+              controller: _notesController,
               maxLines: 5,
               decoration: const InputDecoration(
                 hintText: 'Enter notes about this user...',
@@ -420,12 +561,7 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> with Sing
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {
-                // Save notes functionality
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Notes saved')),
-                );
-              },
+              onPressed: _isSavingNotes ? null : _saveNotes,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.deepPurple,
                 foregroundColor: Colors.white,
@@ -434,7 +570,16 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> with Sing
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('Save Notes'),
+              child: _isSavingNotes 
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text('Save Notes'),
             ),
           ),
         ],
