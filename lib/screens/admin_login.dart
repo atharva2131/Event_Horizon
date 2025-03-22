@@ -36,7 +36,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     super.dispose();
   }
 
-<<<<<<< HEAD
   // Check if user is already logged in
   Future<void> _checkExistingSession() async {
     final prefs = await SharedPreferences.getInstance();
@@ -53,10 +52,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       );
     }
   }
-=======
-  // API URL - Replace with your actual API URL
-  final String baseUrl = 'http://192.168.254.140:3000/api';
->>>>>>> 82cc281b5808f4f271ebf82c4ab66c7e0195d3db
 
   // Admin Sign In API Call
   Future<void> _signIn() async {

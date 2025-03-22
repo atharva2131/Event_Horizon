@@ -23,12 +23,8 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> with Sing
   List<dynamic> _userBookings = [];
   String? _errorMessage;
   late TabController _tabController;
-<<<<<<< HEAD
   final TextEditingController _notesController = TextEditingController();
   bool _isSavingNotes = false;
-=======
-  final String baseUrl = 'http://192.168.254.140:3000/api';
->>>>>>> 82cc281b5808f4f271ebf82c4ab66c7e0195d3db
 
   @override
   void initState() {
