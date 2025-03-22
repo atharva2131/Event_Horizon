@@ -1,14 +1,14 @@
 import 'dart:convert';
-import 'package:eventhorizon/screens/admin_bookings.dart';
-import 'package:eventhorizon/screens/admin_payments.dart';
-import 'package:eventhorizon/screens/admin_users.dart';
-import 'package:eventhorizon/screens/admin_vendors.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:eventhorizon/screens/admin_reports_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'api_service.dart';
+import 'package:intl/intl.dart';
+import '../screens/admin_bookings.dart';
+import '../screens/admin_payments.dart';
+import '../screens/admin_users.dart';
+import '../screens/admin_reports_screen.dart';
+import '../screens/api_service.dart';
 import 'admin_login.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -53,7 +53,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     });
 
     try {
-      // Try to fetch dashboard data from API
+      // Fetch dashboard data from API
       final data = await ApiService.fetchDashboardData();
       
       if (mounted) {
@@ -66,48 +66,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       debugPrint('Error fetching dashboard data: $e');
       
       // Fallback to mock data if API fails
-      _dashboardData = {
-        'totalUsers': 1245,
-        'activeVendors': 87,
-        'pendingBookings': 32,
-        'totalRevenue': 245000,
-        'monthlyRevenue': [15000, 22000, 18500, 25000, 30000, 28000, 35000, 40000, 38000, 42000, 45000, 50000],
-        'recentActivities': [
-          {
-            'type': 'user',
-            'title': 'New User Registration',
-            'description': 'John Doe registered as a new user',
-            'time': '2 hours ago'
-          },
-          {
-            'type': 'vendor',
-            'title': 'Vendor Approved',
-            'description': 'Elegant Events was approved as a vendor',
-            'time': '3 hours ago'
-          },
-          {
-            'type': 'booking',
-            'title': 'New Booking',
-            'description': 'Wedding ceremony booked at Grand Plaza',
-            'time': '5 hours ago'
-          },
-          {
-            'type': 'payment',
-            'title': 'Payment Received',
-            'description': '₹25,000 received for booking #1234',
-            'time': '6 hours ago'
-          },
-          {
-            'type': 'user',
-            'title': 'User Profile Updated',
-            'description': 'Sarah Johnson updated her profile information',
-            'time': '8 hours ago'
-          }
-        ]
-      };
-      
       if (mounted) {
         setState(() {
+          _dashboardData = {
+            'totalUsers': 0,
+            'activeVendors': 0,
+            'pendingBookings': 0,
+            'totalRevenue': 0,
+            'monthlyRevenue': List.filled(12, 0),
+            'recentActivities': []
+          };
           _isLoading = false;
         });
       }
@@ -115,15 +83,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   void _onItemTapped(int index) {
-    if (index == 5) {
-      // Navigate to Reports screen
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const AdminReportScreen()),
-      );
-      return;
-    }
-    
     setState(() {
       _selectedIndex = index;
     });
@@ -144,7 +103,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         // Navigate to Payments screen
         return const AdminPaymentsScreen();
       case 4:
-        // Navigate to Payments screen
+        // Navigate to Reports screen
         return const AdminReportScreen();
       default:
         return _buildDashboardContent();
@@ -178,7 +137,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      
+      appBar: _selectedIndex == 0 ? AppBar(
+        title: Text(
+          'Admin Dashboard',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _signOut,
+            tooltip: 'Logout',
+          ),
+        ],
+      ) : null,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _getScreenForIndex(_selectedIndex),
@@ -200,7 +175,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             icon: Icon(Icons.people),
             label: 'Users',
           ),
-         
           BottomNavigationBarItem(
             icon: Icon(Icons.event),
             label: 'Bookings',
@@ -219,28 +193,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildDashboardContent() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Welcome section
-          _buildWelcomeCard(),
-          const SizedBox(height: 24),
-          
-          // Stats Cards
-          _buildStatsGrid(),
-          
-          const SizedBox(height: 24),
-          
-          // Revenue Chart
-          _buildRevenueChart(),
-          
-          const SizedBox(height: 24),
-          
-          // Recent Activities
-          _buildRecentActivities(),
-        ],
+    return RefreshIndicator(
+      onRefresh: _loadDashboardData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Welcome section
+            _buildWelcomeCard(),
+            const SizedBox(height: 24),
+            
+            // Stats Cards
+            _buildStatsGrid(),
+            
+            const SizedBox(height: 24),
+            
+            // Revenue Chart
+            _buildRevenueChart(),
+            
+            const SizedBox(height: 24),
+            
+            // Recent Activities
+            _buildRecentActivities(),
+          ],
+        ),
       ),
     );
   }
@@ -477,20 +455,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     } else {
       // Sample data if not available
       spots = [
-        const FlSpot(0, 3000),
-        const FlSpot(1, 4500),
-        const FlSpot(2, 3800),
-        const FlSpot(3, 5000),
-        const FlSpot(4, 4200),
-        const FlSpot(5, 6000),
+        const FlSpot(0, 0),
+        const FlSpot(1, 0),
+        const FlSpot(2, 0),
+        const FlSpot(3, 0),
+        const FlSpot(4, 0),
+        const FlSpot(5, 0),
+        const FlSpot(6, 0),
+        const FlSpot(7, 0),
+        const FlSpot(8, 0),
+        const FlSpot(9, 0),
+        const FlSpot(10, 0),
+        const FlSpot(11, 0),
       ];
     }
+
+    // Find the maximum value for Y axis
+    double maxY = 0;
+    for (var spot in spots) {
+      if (spot.y > maxY) {
+        maxY = spot.y;
+      }
+    }
+    // Add 20% padding to the top
+    maxY = maxY * 1.2;
+    // Ensure minimum maxY is 10000
+    maxY = maxY < 10000 ? 10000 : maxY;
 
     return LineChartData(
       gridData: FlGridData(
         show: true,
         drawVerticalLine: false,
-        horizontalInterval: 10000,
+        horizontalInterval: maxY / 5,
         getDrawingHorizontalLine: (value) {
           return FlLine(
             color: Colors.grey.withOpacity(0.2),
@@ -539,12 +535,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         leftTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
-            interval: 10000,
+            interval: maxY / 5,
             getTitlesWidget: (value, meta) {
+              String text;
+              if (value >= 1000) {
+                text = '₹${(value / 1000).toStringAsFixed(0)}k';
+              } else {
+                text = '₹${value.toInt()}';
+              }
+              
               return Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: Text(
-                  '₹${value.toInt() / 1000}k',
+                  text,
                   style: GoogleFonts.poppins(
                     color: Colors.grey[600],
                     fontWeight: FontWeight.w500,
@@ -563,7 +566,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       minX: 0,
       maxX: spots.length - 1.0,
       minY: 0,
-      maxY: 60000,
+      maxY: maxY,
       lineBarsData: [
         LineChartBarData(
           spots: spots,
@@ -621,67 +624,78 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _dashboardData['recentActivities']?.length ?? 0,
-            separatorBuilder: (context, index) => Divider(
-              color: Colors.grey.withOpacity(0.2),
-              height: 24,
-            ),
-            itemBuilder: (context, index) {
-              if (_dashboardData['recentActivities'] == null) {
-                return const ListTile(
-                  title: Text('No recent activities'),
-                );
-              }
-              
-              final activity = _dashboardData['recentActivities'][index];
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _getActivityIcon(activity['type']),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
+          _dashboardData['recentActivities'] != null && 
+          (_dashboardData['recentActivities'] as List).isNotEmpty
+              ? ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: (_dashboardData['recentActivities'] as List).length,
+                  separatorBuilder: (context, index) => Divider(
+                    color: Colors.grey.withOpacity(0.2),
+                    height: 24,
+                  ),
+                  itemBuilder: (context, index) {
+                    final activity = _dashboardData['recentActivities'][index];
+                    return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          activity['title'] ?? 'Activity',
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
+                        _getActivityIcon(activity['type']),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                activity['title'] ?? 'Activity',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                activity['description'] ?? '',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.grey[600],
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 4),
                         Text(
-                          activity['description'] ?? '',
+                          activity['time'] ?? '',
                           style: GoogleFonts.poppins(
+                            color: Colors.grey[500],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                )
+              : Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.notifications_off,
+                          size: 48,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No recent activities',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
                             color: Colors.grey[600],
-                            fontSize: 13,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  Text(
-                    activity['time'] ?? '',
-                    style: GoogleFonts.poppins(
-                      color: Colors.grey[500],
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-          if (_dashboardData['recentActivities'] == null || _dashboardData['recentActivities'].isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Center(
-                child: Text('No recent activities'),
-              ),
-            ),
+                ),
         ],
       ),
     );
